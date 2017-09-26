@@ -1,0 +1,15 @@
+TDSE: Top-down shooter engine
+
+For general building and installation instructions, see INSTALL.
+
+For a list of user-visible changes, see NEWS.
+
+For a list of notable changes, see ChangeLog.
+
+As the project develops, documentation will be provided on function and features
+as they are added. For now, TDSE is little more than a demonstration. Its
+function and features are subject to substantial changes.
+
+TDSE is developed and maintained by Jeremy Starnes. For questions and comments
+regarding TDSE that are not bug reports or feature requests, you may send emails
+to <laftur.jeremy@gmail.com>.
