@@ -21,13 +21,15 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 
 #include "physics.h"
 
-class rot_ctrl
+class rotation_control
 {
 public:
   const float max_torque;
+  const float inertia;
+  const body & subject;
 
-  rot_ctrl(float _max_torque);
-  float calc_torque(const body & b, float target,
+  rotation_control(const body & rotating_body, float max_torque_);
+  float torque(float target,
     bullet_world::float_seconds substep_time) const;
 };
 

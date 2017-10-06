@@ -17,20 +17,23 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 */
 #include "controller.h"
 
-rot_ctrl::rot_ctrl(float _max_torque)
-: max_torque(_max_torque) {}
-float rot_ctrl::calc_torque(const body & b, float target,
+rotation_control::rotation_control(const body & rotating_body,
+  float max_torque_)
+: max_torque(max_torque_),
+  inertia( rotating_body.getInvInertiaTensorWorld()[2][2] ),
+  subject(rotating_body)
+{}
+float rotation_control::torque(float target,
   bullet_world::float_seconds substep_time) const
 {
-  float angle = angle_from_mat2( b.real_orientation() );
-  float v = b.getAngularVelocity().getZ();
-  float ri = b.getInvInertiaTensorWorld()[2][2];
-  float a = std::copysign(max_torque*ri, -v);
+  float angle = angle_from_mat2( subject.real_orientation() );
+  float v = subject.getAngularVelocity().getZ();
+  float a = std::copysign(max_torque*inertia, -v);
   float stop_time = std::abs(v/a);
   float stop_angle = angle + v*stop_time + a*stop_time*stop_time/2.0f;
   float stop_diff = rad_diff(target, stop_angle);
 
-  a = stop_diff / ( ri*substep_time.count()*substep_time.count() );
+  a = stop_diff / ( inertia*substep_time.count()*substep_time.count() );
   if(std::abs(a) > max_torque)
     return std::copysign(max_torque, a);
   else

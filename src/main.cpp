@@ -19,7 +19,7 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 #include <iostream>
 #include "camera.h"
 #include "shape_renderer.h"
-#include "biped.h"
+#include "ship.h"
 #include "turret.h"
 
 
@@ -29,11 +29,9 @@ public:
   player(window & win, projectile_world & physics_)
   : win_(win),
     wasd(0, 0), mouse(0, 0),
-    test_biped( glm::vec2(0.0f, 0.0f) ),
-    test_projectile(0.1f),
-    test_turret(test_projectile, 8.0f)
+    test_ship( glm::vec2(0.0f, 0.0f) )
   {
-    physics_.add(test_biped);
+    physics_.add(test_ship);
     win_.input_handler(
       std::bind(&player::handle_input, this, std::placeholders::_1)
     );
@@ -89,20 +87,10 @@ public:
   }
   void apply_input()
   {
-    // Transform mouse coordinates to world space
-    auto window_size = win_.size();
-    glm::vec2 view_pos(mouse.x - window_size.x/2.0f,
-      window_size.y/2.0f - mouse.y);
-    camera default_camera(glm::vec2(0.0f, 0.0f), 0.0f, 10.0f);
-    glm::vec2 world_pos = glm::vec3(view_pos, 1.0f)
-      *default_camera.transform()
-      /default_camera.magnification;
-    // Apply control inputs to test_biped
-    glm::vec2 biped_dist = world_pos - test_biped.position();
-    test_turret.target = glm::atan(biped_dist.y, biped_dist.x);
-    test_biped.force(
-      glm::vec2(wasd.x*biped::max_linear_force, wasd.y*biped::max_linear_force)
-    );
+    // Apply control inputs to test_ship
+    test_ship.force( glm::vec2(wasd.y*ship::max_linear_force, 0.0f) );
+    test_ship.target_angle =
+      angle_from_mat2( test_ship.real_orientation() ) - wasd.x;
   }
 
 private:
@@ -110,9 +98,7 @@ private:
   glm::ivec2 wasd, mouse;
 
 public:
-  biped test_biped;
-  projectile::properties test_projectile;
-  turret test_turret;
+  ship test_ship;
 };
 
 
@@ -161,26 +147,14 @@ int main(int argc, char * argv[])
     shape_renderer ren(win);
     player input(win, physics);
     {
-      camera test_camera(input.test_biped.position(), 0.0f, 10.0f);
+      camera test_camera(input.test_ship.position(), 0.0f, 10.0f);
       ren.view( test_camera.view() );
     }
 
-    constexpr int num_circle_vertices = 8;
-    std::array<glm::vec2, num_circle_vertices> circle_vertices;
-    {
-      float angle = 0.0f;
-      float increment = ( 2*glm::pi<float>() )/num_circle_vertices;
-      for(int i = 0; i < num_circle_vertices; ++i)
-      {
-        circle_vertices[i].x = biped::size*glm::cos(angle);
-        circle_vertices[i].y = biped::size*glm::sin(angle);
-        angle += increment;
-      }
-    }
-    std::array<unsigned short, circle_vertices.size()> circle_indices;
-    for(unsigned short i = 0; i < circle_indices.size(); ++i)
-      circle_indices[i] = i;
-    shape test_biped_shape(circle_vertices, circle_indices, GL_LINE_LOOP);
+    std::array<unsigned short, ship::triangle_vertices.size()> triangle_indices;
+    for(unsigned short i = 0; i < triangle_indices.size(); ++i)
+      triangle_indices[i] = i;
+    shape ship_shape(ship::triangle_vertices, triangle_indices, GL_LINE_LOOP);
 
     bool quit = false;
     lap_timer timer;
@@ -198,22 +172,13 @@ int main(int argc, char * argv[])
       }
       input.apply_input();
 
-      // Calculate turret appearance
-      float turret_aim = input.test_turret.aim_angle();
-      glm::vec2 turret_end( biped::size*glm::cos(turret_aim),
-        biped::size*glm::sin(turret_aim) );
-      segment turret_segment( input.test_biped.position() );
-      turret_segment.end = turret_segment.start + turret_end;
-
       // Render scene
       ren.clear();
-      ren.render(input.test_biped.model(), test_biped_shape);
-      ren.render(turret_segment);
+      ren.render(input.test_ship.model(), ship_shape);
       win.present();
 
       // Advance
       auto lap_time = timer.lap();
-      input.test_turret.step(lap_time);
       physics.step(lap_time);
     }
   }

@@ -36,14 +36,12 @@ public:
   static const btConvexHullShape tprism;
   static const btConvex2dShape triangle;
   static const projectile::properties projectile_type;
-  static const rot_ctrl rctrl;
 
   ship(const glm::vec2 & position);
 
   const glm::vec2 & force() const;
   void force(const glm::vec2 & f);
-  float target_angle() const;
-  void target_angle(float angle);
+  float target_angle;
 
 protected:
   virtual void presubstep(bullet_world::float_seconds substep_time) override;
@@ -51,8 +49,8 @@ protected:
 
 private:
   bool can_sleep;
-  glm::vec2 _force;
-  float _target_angle;
+  glm::vec2 force_;
+  rotation_control rctrl;
 };
 
 
