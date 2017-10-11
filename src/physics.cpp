@@ -154,6 +154,14 @@ glm::vec2 motion_state::position() const
   return glm::vec2(pos.getX(), pos.getY());
 }
 
+/*
+void motion_state::warp(const glm::vec2 & new_pos)
+{
+  transform.getOrigin().setX(new_pos.x);
+  transform.getOrigin().setY(new_pos.y);
+}
+*/
+
 void motion_state::getWorldTransform(btTransform & world_trans) const
 {
   world_trans = transform;
@@ -215,6 +223,13 @@ glm::vec2 body::real_position() const
 {
   const btVector3 & origin = btRigidBody::getWorldTransform().getOrigin();
   return glm::vec2( origin.getX(), origin.getY() );
+}
+
+void body::warp(const glm::vec2 & new_pos)
+{
+  btVector3 & pos = btRigidBody::getWorldTransform().getOrigin();
+  pos.setX(new_pos.x);
+  pos.setY(new_pos.y);
 }
 
 void body::join(btDiscreteDynamicsWorld & world)

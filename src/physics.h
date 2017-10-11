@@ -113,6 +113,8 @@ public:
   glm::mat2 orientation() const;
   glm::vec2 position() const;
 
+  //void warp(const glm::vec2 & new_pos);
+
 private:
   btTransform transform;
 
@@ -135,6 +137,8 @@ public:
   glm::mat3 real_transform() const;
   glm::mat2 real_orientation() const;
   glm::vec2 real_position() const;
+
+  void warp(const glm::vec2 & new_pos);
 
 protected:
   virtual void join(btDiscreteDynamicsWorld & world);
