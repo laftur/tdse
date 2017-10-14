@@ -32,9 +32,10 @@ const projectile::properties ship::projectile_type(ship::projectile_mass);
 
 ship::ship(const glm::vec2 & position)
 : body(64.0f, triangle, position),
+  rctrl(*this, 64.0f),
+  rctrl_active(false),
   force_(0.0f, 0.0f),
-  target_angle(0.0f),
-  rctrl(*this, 64.0f)
+  torque_(0.0f)
 {
   forceActivationState(DISABLE_DEACTIVATION);
 }
@@ -49,6 +50,15 @@ void ship::force(const glm::vec2 & f)
   if(mag <= max_linear_force) force_ = f;
   else force_ = f*(max_linear_force/mag);
 }
+float ship::torque() const
+{
+  return torque_;
+}
+void ship::torque(float t)
+{
+  if(std::abs(t) <= max_torque) torque_ = t;
+  else torque_ = std::copysign(max_torque, t);
+}
 
 void ship::presubstep(bullet_world::float_seconds substep_time)
 {
@@ -60,9 +70,8 @@ void ship::presubstep(bullet_world::float_seconds substep_time)
     applyCentralForce( btVector3(rotated_force.x, rotated_force.y, 0.0f) );
   }
 
-  applyTorque(
-    btVector3( 0.0f, 0.0f, rctrl.torque(target_angle, substep_time) )
-  );
+  if(rctrl_active) torque( rctrl.torque(substep_time) );
+  applyTorque( btVector3(0.0f, 0.0f, torque_) );
 }
 void ship::hit(const hit_info & info)
 {

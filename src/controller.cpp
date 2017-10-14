@@ -19,23 +19,45 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 
 rotation_control::rotation_control(const body & rotating_body,
   float max_torque_)
-: max_torque(max_torque_),
-  inertia( rotating_body.getInvInertiaTensorWorld()[2][2] ),
-  subject(rotating_body)
+: inertia( rotating_body.getInvInertiaTensorWorld()[2][2] ),
+  subject(rotating_body),
+  max_torque(max_torque_),
+  target(
+    angle_from_mat2( subject.real_orientation() )
+  ),
+  stop(false)
 {}
-float rotation_control::torque(float target,
-  bullet_world::float_seconds substep_time) const
+float rotation_control::torque(bullet_world::float_seconds substep_time) const
 {
   float angle = angle_from_mat2( subject.real_orientation() );
-  float v = subject.getAngularVelocity().getZ();
-  float a = std::copysign(max_torque*inertia, -v);
-  float stop_time = std::abs(v/a);
-  float stop_angle = angle + v*stop_time + a*stop_time*stop_time/2.0f;
-  float stop_diff = rad_diff(target, stop_angle);
+  float velocity = subject.getAngularVelocity().getZ();
+  float max_accel = std::copysign(max_torque*inertia, -velocity);
+  float time_to_stop = std::abs(velocity/max_accel);
 
-  a = stop_diff / ( inertia*substep_time.count()*substep_time.count() );
-  if(std::abs(a) > max_torque)
-    return std::copysign(max_torque, a);
+  if(stop)
+  {
+    // Boolean stop indicates whether target should be ignored.
+    // When ignoring target, objective is to stop rotation ASAP.
+    if( time_to_stop >= substep_time.count() )
+      return std::copysign(max_torque, -velocity);
+    else
+      return -velocity/time_to_stop*inertia;
+  }
   else
-    return a;
+  {
+    /*
+     * Approach:
+     * stop_point is a future angle where we are projected to achieve zero
+     * velocity.
+     * Adjust the stop point by accelerating until stop_point == target.
+     * When stop_point == target, decelerate until velocity == 0 and
+     * angle == target.
+     */
+    float stop_point = angle + velocity*time_to_stop +
+      max_accel*time_to_stop*time_to_stop/2.0f;
+    float stop_diff = rad_diff(target, stop_point);
+
+    return std::copysign(max_torque, -velocity) + 2.0f*stop_diff /
+      ( inertia*substep_time.count()*substep_time.count() );
+  }
 }

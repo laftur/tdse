@@ -24,13 +24,15 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 class rotation_control
 {
 public:
-  const float max_torque;
   const float inertia;
   const body & subject;
+  const float max_torque;
 
   rotation_control(const body & rotating_body, float max_torque_);
-  float torque(float target,
-    bullet_world::float_seconds substep_time) const;
+  float torque(bullet_world::float_seconds substep_time) const;
+
+  float target;
+  bool stop;
 };
 
 

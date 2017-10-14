@@ -142,8 +142,16 @@ public:
   {
     // Apply control inputs to test_ship
     test_ship.force( glm::vec2(wasd.y*ship::max_linear_force, 0.0f) );
-    test_ship.target_angle =
-      angle_from_mat2( test_ship.real_orientation() ) - wasd.x;
+    if(wasd.x == 0)
+    {
+      test_ship.rctrl.stop = true;
+      test_ship.rctrl_active = true;
+    }
+    else
+    {
+      test_ship.torque(-test_ship.max_torque*wasd.x);
+      test_ship.rctrl_active = false;
+    }
   }
 
 private:

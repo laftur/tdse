@@ -29,7 +29,8 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 class ship : public body, public needs_presubstep, public needs_hit
 {
 public:
-  static constexpr float max_linear_force = 256.0f;
+  static constexpr float max_linear_force = 512.0f;
+  static constexpr float max_torque = 64.0f;
   static constexpr float projectile_mass = 0.1f;
 
   static const std::array<glm::vec2, 3> triangle_vertices;
@@ -41,7 +42,11 @@ public:
 
   const glm::vec2 & force() const;
   void force(const glm::vec2 & f);
-  float target_angle;
+  float torque() const;
+  void torque(float t);
+
+  rotation_control rctrl;
+  bool rctrl_active;
 
 protected:
   virtual void presubstep(bullet_world::float_seconds substep_time) override;
@@ -50,7 +55,7 @@ protected:
 private:
   bool can_sleep;
   glm::vec2 force_;
-  rotation_control rctrl;
+  float torque_;
 };
 
 
