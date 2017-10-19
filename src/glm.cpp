@@ -119,7 +119,16 @@ glm::mat3 compose_transform(const glm::vec2 & position,
 
 float rad_diff(float a, float b)
 {
-  float result = std::fmod( a - b, glm::two_pi<float>() );
+  // convert to range: (-2pi, 2pi)
+  float am = std::fmod(a, glm::two_pi<float>() );
+  float bm = std::fmod(b, glm::two_pi<float>() );
+
+  // return smallest difference
+  float result = am - bm;
   if( std::abs(result) <= glm::pi<float>() ) return result;
-  else return std::fmod( b - a, glm::two_pi<float>() );
+  else
+  {
+    am = std::copysign(std::abs(am) - glm::two_pi<float>(), -am);
+    return am - bm;
+  }
 }
