@@ -23,24 +23,35 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 #include "turret.h"
 
 
-class player
+class soldier
 {
 public:
-  player(window & win, projectile_world & physics_)
-  : win_(win),
-    wasd(0, 0), mouse(0, 0),
-    test_biped( glm::vec2(0.0f, 0.0f) ),
-    test_projectile(0.1f),
-    test_turret(test_projectile, 8.0f)
+  soldier(projectile_world & physics_, const glm::vec2 & position)
+  : actor(position),
+    bullet_type(0.1f),
+    weapon(bullet_type, 8.0f)
   {
-    physics_.add(test_biped);
+    physics_.add(actor);
+  }
+  soldier(const soldier &) = delete;
+  void operator=(const soldier &) = delete;
+
+  biped actor;
+  projectile::properties bullet_type;
+  turret weapon;
+};
+
+class human_interface
+{
+public:
+  human_interface(window & win)
+  : win_(win),
+    wasd(0, 0), mouse(0, 0)
+  {
     win_.input_handler(
-      std::bind(&player::handle_input, this, std::placeholders::_1)
+      std::bind(&human_interface::handle_input, this, std::placeholders::_1)
     );
   }
-  player(const player &) = delete;
-  void operator=(const player &) = delete;
-
   void handle_input(const SDL_Event & event)
   {
     switch(event.type)
@@ -87,7 +98,7 @@ public:
       break;
     }
   }
-  void apply_input()
+  void apply_input(soldier & player)
   {
     // Transform mouse coordinates to world space
     auto window_size = win_.size();
@@ -98,21 +109,16 @@ public:
       *default_camera.transform()
       /default_camera.magnification;
     // Apply control inputs to test_biped
-    glm::vec2 biped_dist = world_pos - test_biped.position();
-    test_turret.target = glm::atan(biped_dist.y, biped_dist.x);
-    test_biped.force(
+    glm::vec2 player_dist = world_pos - player.actor.position();
+    player.weapon.target = glm::atan(player_dist.y, player_dist.x);
+    player.actor.force(
       glm::vec2(wasd.x*biped::max_linear_force, wasd.y*biped::max_linear_force)
     );
   }
 
 private:
-  window & win_;
   glm::ivec2 wasd, mouse;
-
-public:
-  biped test_biped;
-  projectile::properties test_projectile;
-  turret test_turret;
+  window & win_;
 };
 
 
@@ -154,17 +160,19 @@ int main(int argc, char * argv[])
   {
     bullet_components physics_parts;
     projectile_world physics(physics_parts);
+    soldier player( physics, glm::vec2(0.0f, 0.0f) );
 
     sdl media_layer(SDL_INIT_VIDEO);
     media_layer.gl_version(1, 4);
     window win( media_layer, "", glm::ivec2(640, 480) );
     shape_renderer ren(win);
-    player input(win, physics);
+    human_interface input(win);
     {
-      camera test_camera(input.test_biped.position(), 0.0f, 10.0f);
+      camera test_camera(player.actor.position(), 0.0f, 10.0f);
       ren.view( test_camera.view() );
     }
 
+    // Construct circle shape
     constexpr int num_circle_vertices = 8;
     std::array<glm::vec2, num_circle_vertices> circle_vertices;
     {
@@ -196,24 +204,24 @@ int main(int argc, char * argv[])
           break;
         }
       }
-      input.apply_input();
+      input.apply_input(player);
 
       // Calculate turret appearance
-      float turret_aim = input.test_turret.aim_angle();
+      float turret_aim = player.weapon.aim_angle();
       glm::vec2 turret_end( biped::size*glm::cos(turret_aim),
         biped::size*glm::sin(turret_aim) );
-      segment turret_segment( input.test_biped.position() );
+      segment turret_segment( player.actor.position() );
       turret_segment.end = turret_segment.start + turret_end;
 
       // Render scene
       ren.clear();
-      ren.render(input.test_biped.model(), test_biped_shape);
+      ren.render(player.actor.model(), test_biped_shape);
       ren.render(turret_segment);
       win.present();
 
       // Advance
       auto lap_time = timer.lap();
-      input.test_turret.step(lap_time);
+      player.weapon.step(lap_time);
       physics.step(lap_time);
     }
   }
