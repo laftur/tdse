@@ -28,14 +28,38 @@ projectile_world::projectile_world(bullet_components & components)
 : bullet_world(components)
 {}
 
-void projectile_world::presubstep(bullet_world::float_seconds time)
+void projectile_world::presubstep(bullet_world::float_seconds substep_time)
 {
-  hits.clear();
+  // Fire all willing and able shooters
+  btCollisionObjectArray & array = getCollisionObjectArray();
+  for(int i = 0; i < array.size(); ++i)
+  {
+    // Check if object is a shooter
+    shooter * ptr = dynamic_cast<shooter *>( static_cast<body *>(array[i]) );
+    if(!ptr) continue;
 
+    // Check will
+    if(ptr->wants_fire)
+    {
+      // Check if it has been long enough since last fire
+      auto now = std::chrono::steady_clock::now();
+      auto time_until_fire =
+        std::chrono::duration_cast<bullet_world::float_seconds>
+        (ptr->next_fire_ - now);
+      if(time_until_fire.count() < substep_time.count()/2.0f)
+      {
+        // Fire
+        ptr->next_fire_ = now + ptr->fire_period;
+        projectiles.emplace_back( ptr->fire() );
+      }
+    }
+  }
+
+  // Step all projectiles
   auto i = projectiles.begin();
   while( i != projectiles.end() )
   {
-    glm::vec2 target = i->position + i->velocity*time.count();
+    glm::vec2 target = i->position + i->velocity*substep_time.count();
     btVector3 bt_position(i->position.x, i->position.y, 0.0f),
           bt_target(target.x, target.y, 0.0f);
     btCollisionWorld::ClosestRayResultCallback result(bt_position,
@@ -47,7 +71,7 @@ void projectile_world::presubstep(bullet_world::float_seconds time)
       body * victim = static_cast<body *>
         ( const_cast<btCollisionObject *>(result.m_collisionObject) );
 
-      hits.emplace_back(
+      hit_info blam(
         i->type,
         i->velocity,
         glm::vec2( result.m_hitPointWorld.getX(),
@@ -56,7 +80,7 @@ void projectile_world::presubstep(bullet_world::float_seconds time)
           result.m_hitNormalWorld.getY() )
       );
       if( needs_hit * ptr = dynamic_cast<needs_hit *>(victim) )
-        ptr->hit( hit_info(hits.back()) );
+        ptr->hit(blam);
 
       i = projectiles.erase(i);
     }
@@ -67,5 +91,16 @@ void projectile_world::presubstep(bullet_world::float_seconds time)
     }
   }
 
-  bullet_world::presubstep(time);
+  bullet_world::presubstep(substep_time);
+}
+
+
+shooter::shooter(std::chrono::steady_clock::duration fire_period_)
+: wants_fire(false),
+  fire_period(fire_period_),
+  next_fire_( std::chrono::steady_clock::now() )
+{}
+std::chrono::steady_clock::time_point shooter::next_fire() const
+{
+  return next_fire_;
 }

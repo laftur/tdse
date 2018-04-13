@@ -23,22 +23,32 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 #include "turret.h"
 
 
-class soldier
+class soldier : public biped, public shooter
 {
 public:
-  soldier(projectile_world & physics_, const glm::vec2 & position)
-  : actor(position),
+  soldier(const glm::vec2 & position)
+  : biped(position),
+    shooter( std::chrono::milliseconds(100) ),
     bullet_type(0.1f),
-    weapon(bullet_type, 8.0f)
-  {
-    physics_.add(actor);
-  }
+    weapon(8.0f)
+  {}
   soldier(const soldier &) = delete;
   void operator=(const soldier &) = delete;
 
-  biped actor;
   projectile::properties bullet_type;
   turret weapon;
+
+protected:
+  virtual projectile fire() override
+  {
+    glm::vec2 velocity(100.0f, 0.0f);
+    glm::mat2 direction = mat2_from_angle( weapon.aim_angle() );
+    return projectile(
+      bullet_type,
+      real_position(),
+      direction*velocity
+    );
+  }
 };
 
 class human_interface
@@ -46,7 +56,7 @@ class human_interface
 public:
   human_interface(window & win)
   : win_(win),
-    wasd(0, 0), mouse(0, 0)
+    wasd(0, 0), mouse(0, 0), space(false)
   {
     win_.input_handler(
       std::bind(&human_interface::handle_input, this, std::placeholders::_1)
@@ -72,6 +82,9 @@ public:
       case SDL_SCANCODE_D:
         wasd.x += 1;
         break;
+      case SDL_SCANCODE_SPACE:
+        space = true;
+        break;
       }
       break;
     case SDL_KEYUP:
@@ -89,6 +102,9 @@ public:
         break;
       case SDL_SCANCODE_D:
         wasd.x -= 1;
+        break;
+      case SDL_SCANCODE_SPACE:
+        space = false;
         break;
       }
       break;
@@ -109,15 +125,17 @@ public:
       *default_camera.transform()
       /default_camera.magnification;
     // Apply control inputs to test_biped
-    glm::vec2 player_dist = world_pos - player.actor.position();
+    glm::vec2 player_dist = world_pos - player.position();
     player.weapon.target = glm::atan(player_dist.y, player_dist.x);
-    player.actor.force(
+    player.force(
       glm::vec2(wasd.x*biped::max_linear_force, wasd.y*biped::max_linear_force)
     );
+    player.wants_fire = space;
   }
 
 private:
   glm::ivec2 wasd, mouse;
+  bool space;
   window & win_;
 };
 
@@ -160,17 +178,29 @@ int main(int argc, char * argv[])
   {
     bullet_components physics_parts;
     projectile_world physics(physics_parts);
-    soldier player( physics, glm::vec2(0.0f, 0.0f) );
+    soldier player( glm::vec2(0.0f, 0.0f) );
+    physics.add(player);
+
+    // Instantiate targets to shoot at
+    std::vector<biped> test_bipeds;
+    static constexpr glm::vec2 start(-25.0f, -25.0f);
+    static constexpr int width = 5;
+    static constexpr int num_test_bipeds = 25;
+    static constexpr float spacing = 10.0f;
+    test_bipeds.reserve(num_test_bipeds);
+    for(int i = 0; i < num_test_bipeds; ++i)
+    {
+      test_bipeds.emplace_back(
+        start + glm::vec2( spacing*(i%width), spacing*(i/width) )
+      );
+      physics.add( test_bipeds[i] );
+    }
 
     sdl media_layer(SDL_INIT_VIDEO);
     media_layer.gl_version(1, 4);
     window win( media_layer, "", glm::ivec2(640, 480) );
     shape_renderer ren(win);
     human_interface input(win);
-    {
-      camera test_camera(player.actor.position(), 0.0f, 10.0f);
-      ren.view( test_camera.view() );
-    }
 
     // Construct circle shape
     constexpr int num_circle_vertices = 8;
@@ -189,6 +219,9 @@ int main(int argc, char * argv[])
     for(unsigned short i = 0; i < circle_indices.size(); ++i)
       circle_indices[i] = i;
     shape test_biped_shape(circle_vertices, circle_indices, GL_LINE_LOOP);
+
+    camera test_camera(player.position(), 0.0f, 10.0f);
+    ren.view( test_camera.view() );
 
     bool quit = false;
     lap_timer timer;
@@ -210,13 +243,25 @@ int main(int argc, char * argv[])
       float turret_aim = player.weapon.aim_angle();
       glm::vec2 turret_end( biped::size*glm::cos(turret_aim),
         biped::size*glm::sin(turret_aim) );
-      segment turret_segment( player.actor.position() );
+      segment turret_segment( player.position() );
       turret_segment.end = turret_segment.start + turret_end;
+
+      // Calculate segments from projectiles
+      std::vector<segment> psegments;
+      for(auto i = physics.projectiles.begin();
+        i != physics.projectiles.end();
+        ++i)
+      {
+        psegments.emplace_back(i->position, i->position - 0.01f*i->velocity);
+      }
 
       // Render scene
       ren.clear();
-      ren.render(player.actor.model(), test_biped_shape);
+      ren.render(player.model(), test_biped_shape);
+      for(auto i = test_bipeds.begin(); i != test_bipeds.end(); ++i)
+        ren.render(i->model(), test_biped_shape);
       ren.render(turret_segment);
+      ren.render(psegments);
       win.present();
 
       // Advance

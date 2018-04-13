@@ -19,13 +19,12 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 #define TURRET_H_INCLUDED
 
 
-#include "projectile.h"
+#include "physics.h"
 class turret
 {
 public:
-  turret(const projectile::properties & ptype, float aim_speed_);
+  turret(float aim_speed_);
 
-  const projectile::properties & projectile_type;
   const float aim_speed;
 
   float target;

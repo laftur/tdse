@@ -48,8 +48,8 @@ public:
   projectile_world(bullet_components & components);
 
   std::list<projectile> projectiles;
-  std::vector<hit_info> hits;
-  virtual void presubstep(bullet_world::float_seconds time) override;
+
+  virtual void presubstep(bullet_world::float_seconds substep_time) override;
 };
 
 
@@ -72,6 +72,22 @@ class needs_hit
 {
 public:
   virtual void hit(const hit_info & info) = 0;
+};
+
+
+class shooter
+{
+public:
+  shooter(std::chrono::steady_clock::duration fire_period_);
+  virtual projectile fire() = 0;
+  std::chrono::steady_clock::time_point next_fire() const;
+
+  bool wants_fire;
+  const std::chrono::steady_clock::duration fire_period;
+
+private:
+  std::chrono::steady_clock::time_point next_fire_;
+  friend class projectile_world;
 };
 
 
