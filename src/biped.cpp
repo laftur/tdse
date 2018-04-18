@@ -63,6 +63,8 @@ void biped::presubstep(bullet_world::float_seconds substep_time)
 }
 void biped::hit(const hit_info & info)
 {
+  btRigidBody::activate();
+
   // Assume the projectile embedded itself
   glm::vec2 momentum = info.velocity*info.type.mass;
   glm::vec2 local_point = info.world_point - real_position();
