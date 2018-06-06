@@ -126,5 +126,9 @@ float rad_diff(float a, float b)
   // return smallest difference
   float result = am - bm;
   if( std::abs(result) <= glm::pi<float>() ) return result;
-  else return ( am - glm::two_pi<float>() ) - bm;
+  else
+  {
+    am = std::copysign(std::abs(am) - glm::two_pi<float>(), -am);
+    return am - bm;
+  }
 }

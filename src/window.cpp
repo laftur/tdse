@@ -34,6 +34,8 @@ ogl_context & ogl_context::operator=(ogl_context && rhs)
 {
   _context = rhs._context;
   rhs._context = nullptr;
+
+  return *this;
 }
 
 ogl_context::ogl_context(SDL_GLContext context)
