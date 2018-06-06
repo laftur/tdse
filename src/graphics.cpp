@@ -182,8 +182,7 @@ renderer::renderer(window & w)
       {DATA_DIR "/fragment.glsl"},
       GL_FRAGMENT_SHADER
     )
-  },
-  projection(glm::uninitialize)
+  }
 {
   gpu_program.use();
 
