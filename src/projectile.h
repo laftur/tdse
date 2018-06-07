@@ -45,9 +45,12 @@ class hit_info;
 class projectile_world : public bullet_world
 {
 public:
-  projectile_world(bullet_components & components);
+  // Boundary is how far out projectiles are tracked (rectangle half-extents)
+  projectile_world(const glm::vec2 & boundary_);
 
   std::list<projectile> projectiles;
+  const glm::vec2 boundary;
+  static bullet_components components;
 
   virtual void presubstep(bullet_world::float_seconds substep_time) override;
 };

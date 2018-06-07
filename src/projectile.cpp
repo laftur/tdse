@@ -24,8 +24,11 @@ projectile::projectile(const projectile::properties & t, const glm::vec2 & p,
 {}
 
 
-projectile_world::projectile_world(bullet_components & components)
-: bullet_world(components)
+bullet_components projectile_world::components;
+
+projectile_world::projectile_world(const glm::vec2 & boundary_)
+: boundary(boundary_),
+  bullet_world(components)
 {}
 
 void projectile_world::presubstep(bullet_world::float_seconds substep_time)
@@ -59,6 +62,16 @@ void projectile_world::presubstep(bullet_world::float_seconds substep_time)
   auto i = projectiles.begin();
   while( i != projectiles.end() )
   {
+    const glm::vec2 & pref = i->position;
+    // Delete projectiles that have passed boundary
+    if(pref.x >= boundary.x || pref.x <= -boundary.x ||
+      pref.y >= boundary.y || pref.y <= -boundary.y)
+    {
+      i = projectiles.erase(i);
+      continue;
+    }
+
+    // Raycast projectiles still within boundary
     glm::vec2 target = i->position + i->velocity*substep_time.count();
     btVector3 bt_position(i->position.x, i->position.y, 0.0f),
           bt_target(target.x, target.y, 0.0f);
@@ -88,6 +101,7 @@ void projectile_world::presubstep(bullet_world::float_seconds substep_time)
     {
       i->position = target;
       ++i;
+      continue;
     }
   }
 

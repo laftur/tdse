@@ -176,8 +176,7 @@ int main(int argc, char * argv[])
 {
   try
   {
-    bullet_components physics_parts;
-    projectile_world physics(physics_parts);
+    projectile_world physics( glm::vec2(1000.0f, 1000.0f) );
     soldier player( glm::vec2(0.0f, 0.0f) );
     physics.add(player);
 
