@@ -29,7 +29,7 @@ public:
   soldier(const glm::vec2 & position)
   : biped(position),
     shooter( std::chrono::milliseconds(100) ),
-    bullet_type(0.1f),
+    bullet_type(0.008f),
     weapon(8.0f)
   {}
   soldier(const soldier &) = delete;
@@ -41,7 +41,7 @@ public:
 protected:
   virtual projectile fire() override
   {
-    glm::vec2 velocity(100.0f, 0.0f);
+    glm::vec2 velocity(400.0f, 0.0f);
     glm::mat2 direction = mat2_from_angle( weapon.aim_angle() );
     return projectile(
       bullet_type,

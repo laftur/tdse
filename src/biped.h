@@ -27,7 +27,7 @@ class biped : public body, public needs_presubstep, public needs_hit
 {
 public:
   static constexpr float size = 1.0f;
-  static constexpr float max_linear_force = 128.0f;
+  static constexpr float max_linear_force = 100.0f;
 
   static const btSphereShape sphere;
   static const btConvex2dShape circle;
