@@ -120,7 +120,7 @@ public:
     auto window_size = win_.size();
     glm::vec2 view_pos(mouse.x - window_size.x/2.0f,
       window_size.y/2.0f - mouse.y);
-    camera default_camera(glm::vec2(0.0f, 0.0f), 0.0f, 10.0f);
+    camera default_camera(player.position(), 0.0f, 40.0f);
     glm::vec2 world_pos = glm::vec3(view_pos, 1.0f)
       *default_camera.transform()
       /default_camera.magnification;
@@ -182,10 +182,10 @@ int main(int argc, char * argv[])
 
     // Instantiate targets to shoot at
     std::vector<biped> test_bipeds;
-    static constexpr glm::vec2 start(-25.0f, -25.0f);
+    static constexpr glm::vec2 start(-6.25f, -6.25f);
     static constexpr int width = 5;
     static constexpr int num_test_bipeds = 25;
-    static constexpr float spacing = 10.0f;
+    static constexpr float spacing = 2.5f;
     test_bipeds.reserve(num_test_bipeds);
     for(int i = 0; i < num_test_bipeds; ++i)
     {
@@ -219,7 +219,7 @@ int main(int argc, char * argv[])
       circle_indices[i] = i;
     shape test_biped_shape(circle_vertices, circle_indices, GL_LINE_LOOP);
 
-    camera test_camera(player.position(), 0.0f, 10.0f);
+    camera test_camera(player.position(), 0.0f, 40.0f);
     ren.view( test_camera.view() );
 
     bool quit = false;

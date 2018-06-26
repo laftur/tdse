@@ -25,7 +25,7 @@ const btConvex2dShape biped::circle
 
 #include <glm/gtc/matrix_transform.hpp>
 biped::biped(const glm::vec2 & position)
-  : body(glm::pi<float>()*size*size*2.0f, circle, position),
+  : body(glm::pi<float>()*size*size*400.0f, circle, position),
   _force(0.0f, 0.0f)
 {
   // Disable rotation

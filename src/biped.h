@@ -26,8 +26,8 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 class biped : public body, public needs_presubstep, public needs_hit
 {
 public:
-  static constexpr float size = 1.0f;
-  static constexpr float max_linear_force = 100.0f;
+  static constexpr float size = 0.25f;
+  static constexpr float max_linear_force = 400.0f;
 
   static const btSphereShape sphere;
   static const btConvex2dShape circle;
