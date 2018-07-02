@@ -23,14 +23,16 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 #include "turret.h"
 
 
+#include <random>
 class soldier : public biped, public shooter
 {
 public:
-  soldier(const glm::vec2 & position)
+  soldier(const glm::vec2 & position, std::default_random_engine & prand)
   : biped(position),
     shooter( std::chrono::milliseconds(100) ),
     bullet_type(0.008f),
-    weapon(8.0f)
+    weapon(8.0f),
+    prand_(prand)
   {}
   soldier(const soldier &) = delete;
   void operator=(const soldier &) = delete;
@@ -38,11 +40,16 @@ public:
   projectile::properties bullet_type;
   turret weapon;
 
+private:
+  std::default_random_engine & prand_;
+  static std::normal_distribution<float> normal_dist;
+
 protected:
   virtual projectile fire() override
   {
     glm::vec2 velocity(400.0f, 0.0f);
-    glm::mat2 direction = mat2_from_angle( weapon.aim_angle() );
+    glm::mat2 direction = mat2_from_angle( weapon.aim_angle()
+      + normal_dist(prand_) );
     return projectile(
       bullet_type,
       real_position(),
@@ -50,6 +57,7 @@ protected:
     );
   }
 };
+std::normal_distribution<float> soldier::normal_dist(0.0f, 0.02f);
 
 class human_interface
 {
@@ -176,8 +184,14 @@ int main(int argc, char * argv[])
 {
   try
   {
+    std::random_device::result_type seed;
+    {
+      std::random_device r;
+      seed = r();
+    }
+    std::default_random_engine prand(seed);
     projectile_world physics( glm::vec2(1000.0f, 1000.0f) );
-    soldier player( glm::vec2(0.0f, 0.0f) );
+    soldier player(glm::vec2(0.0f, 0.0f), prand);
     physics.add(player);
 
     // Instantiate targets to shoot at
