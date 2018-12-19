@@ -64,7 +64,8 @@ class human_interface
 public:
   human_interface(window & win)
   : win_(win),
-    wasd(0, 0), mouse(0, 0), space(false)
+    wasd(0, 0), mouse(0, 0), zoom(0), space(false),
+    cam(glm::vec2(0.0f, 0.0f), 0.0f, 40.0f)
   {
     win_.input_handler(
       std::bind(&human_interface::handle_input, this, std::placeholders::_1)
@@ -93,6 +94,12 @@ public:
       case SDL_SCANCODE_SPACE:
         space = true;
         break;
+      case SDL_SCANCODE_R:
+        zoom += 1;
+        break;
+      case SDL_SCANCODE_F:
+        zoom -= 1;
+        break;
       }
       break;
     case SDL_KEYUP:
@@ -114,6 +121,12 @@ public:
       case SDL_SCANCODE_SPACE:
         space = false;
         break;
+      case SDL_SCANCODE_R:
+        zoom -= 1;
+        break;
+      case SDL_SCANCODE_F:
+        zoom += 1;
+        break;
       }
       break;
     case SDL_MOUSEMOTION:
@@ -128,10 +141,8 @@ public:
     auto window_size = win_.size();
     glm::vec2 view_pos(mouse.x - window_size.x/2.0f,
       window_size.y/2.0f - mouse.y);
-    camera default_camera(player.position(), 0.0f, 40.0f);
-    glm::vec2 world_pos = glm::vec3(view_pos, 1.0f)
-      *default_camera.transform()
-      /default_camera.magnification;
+    glm::vec2 world_pos = cam.transform()
+      *glm::vec3(view_pos/cam.magnification, 1.0f);
     // Apply control inputs to test_biped
     glm::vec2 player_dist = world_pos - player.position();
     player.weapon.target = glm::atan(player_dist.y, player_dist.x);
@@ -139,12 +150,18 @@ public:
       glm::vec2(wasd.x*biped::max_linear_force, wasd.y*biped::max_linear_force)
     );
     player.wants_fire = space;
+    
+    cam.magnification_velocity = zoom*1.0f;
   }
 
 private:
-  glm::ivec2 wasd, mouse;
-  bool space;
   window & win_;
+  glm::ivec2 wasd, mouse;
+  float zoom;
+  bool space;
+
+public:
+  kinematic_camera cam;
 };
 
 
@@ -196,10 +213,10 @@ int main(int argc, char * argv[])
 
     // Instantiate targets to shoot at
     std::vector<biped> test_bipeds;
-    static constexpr glm::vec2 start(-6.25f, -6.25f);
-    static constexpr int width = 5;
-    static constexpr int num_test_bipeds = 25;
-    static constexpr float spacing = 2.5f;
+    static const glm::vec2 start(-6.25f, -6.25f);
+    static const int width = 5;
+    static const int num_test_bipeds = 25;
+    static const float spacing = 2.5f;
     test_bipeds.reserve(num_test_bipeds);
     for(int i = 0; i < num_test_bipeds; ++i)
     {
@@ -232,9 +249,6 @@ int main(int argc, char * argv[])
     for(unsigned short i = 0; i < circle_indices.size(); ++i)
       circle_indices[i] = i;
     shape test_biped_shape(circle_vertices, circle_indices, GL_LINE_LOOP);
-
-    camera test_camera(player.position(), 0.0f, 40.0f);
-    ren.view( test_camera.view() );
 
     bool quit = false;
     lap_timer timer;
@@ -270,6 +284,7 @@ int main(int argc, char * argv[])
 
       // Render scene
       ren.clear();
+      ren.view( input.cam.view() );
       ren.render(player.model(), test_biped_shape);
       for(auto i = test_bipeds.begin(); i != test_bipeds.end(); ++i)
         ren.render(i->model(), test_biped_shape);
@@ -281,6 +296,7 @@ int main(int argc, char * argv[])
       auto lap_time = timer.lap();
       player.weapon.step(lap_time);
       physics.step(lap_time);
+      input.cam.step(lap_time);
     }
   }
   catch(const std::exception & e)
