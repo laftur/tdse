@@ -25,8 +25,8 @@ const btConvex2dShape biped::circle
 
 #include <glm/gtc/matrix_transform.hpp>
 biped::biped(const glm::vec2 & position)
-  : body(glm::pi<float>()*size*size*400.0f, circle, position),
-  _force(0.0f, 0.0f)
+: body(glm::pi<float>()*size*size*400.0f, circle, position),
+  force_(0.0f, 0.0f)
 {
   // Disable rotation
   setAngularFactor(btVector3(0, 0, 0));
@@ -36,21 +36,21 @@ biped::biped(const glm::vec2 & position)
 
 const glm::vec2 & biped::force() const
 {
-  return _force;
+  return force_;
 }
 void biped::force(const glm::vec2 & f)
 {
   float mag = glm::length(f);
-  if(mag <= max_linear_force) _force = f;
-  else _force = f*(max_linear_force/mag);
+  if(mag <= max_linear_force) force_ = f;
+  else force_ = f*(max_linear_force/mag);
 }
 
-void biped::presubstep(bullet_world::float_seconds substep_time)
+void biped::presubstep(bullet_world & world, float_seconds substep_time)
 {
-  if(_force.x != 0.0f || _force.y != 0.0f)
+  if(force_.x != 0.0f || force_.y != 0.0f)
   {
     btRigidBody::activate();
-    applyCentralForce( btVector3(_force.x, _force.y, 0.0f) );
+    applyCentralForce( btVector3(force_.x, force_.y, 0.0f) );
     setDamping(0.5f, 0.0f);
   }
   else

@@ -20,7 +20,7 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 rot_ctrl::rot_ctrl(float _max_torque)
 : max_torque(_max_torque) {}
 float rot_ctrl::calc_torque(const body & b, float target,
-  bullet_world::float_seconds substep_time) const
+                            float_seconds substep_time) const
 {
   float angle = angle_from_mat2( b.real_orientation() );
   float v = b.getAngularVelocity().getZ();

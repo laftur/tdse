@@ -58,7 +58,7 @@ void ship::target_angle(float angle)
   _target_angle = angle;
 }
 
-void ship::presubstep(bullet_world::float_seconds substep_time)
+void ship::presubstep(bullet_world & world, float_seconds substep_time)
 {
   glm::mat2 ori = real_orientation();
 

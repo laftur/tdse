@@ -29,7 +29,7 @@ class soldier : public biped, public shooter
 public:
   soldier(const glm::vec2 & position, std::default_random_engine & prand)
   : biped(position),
-    shooter( std::chrono::milliseconds(100) ),
+    shooter( std::chrono::milliseconds(120) ),
     bullet_type(0.008f),
     weapon(8.0f),
     prand_(prand)
@@ -45,7 +45,7 @@ private:
   static std::normal_distribution<float> normal_dist;
 
 protected:
-  virtual projectile fire() override
+  projectile fire() override
   {
     glm::vec2 velocity(400.0f, 0.0f);
     glm::mat2 direction = mat2_from_angle( weapon.aim_angle()
@@ -143,7 +143,7 @@ public:
       window_size.y/2.0f - mouse.y);
     glm::vec2 world_pos = cam.transform()
       *glm::vec3(view_pos/cam.magnification, 1.0f);
-    // Apply control inputs to test_biped
+    // Apply control inputs to player object
     glm::vec2 player_dist = world_pos - player.position();
     player.weapon.target = glm::atan(player_dist.y, player_dist.x);
     player.force(
@@ -173,27 +173,23 @@ public:
   typedef std::chrono::steady_clock::time_point time_point;
   typedef std::chrono::steady_clock::duration duration;
 
-  lap_timer();
-  time_point last() const;
-  duration lap();
+  lap_timer()
+  : _last( std::chrono::steady_clock::now() )
+  {}
+  time_point last() const
+  {
+    return _last;
+  }
+  duration lap()
+  {
+    time_point __last = _last;
+    _last = std::chrono::steady_clock::now();
+    return _last - __last;
+  }
 
 private:
   time_point _last;
 };
-
-lap_timer::lap_timer()
-: _last( std::chrono::steady_clock::now() )
-{}
-lap_timer::time_point lap_timer::last() const
-{
-  return _last;
-}
-lap_timer::duration lap_timer::lap()
-{
-  time_point __last = _last;
-  _last = std::chrono::steady_clock::now();
-  return _last - __last;
-}
 
 
 #include <glm/gtc/constants.hpp>
@@ -207,9 +203,15 @@ int main(int argc, char * argv[])
       seed = r();
     }
     std::default_random_engine prand(seed);
-    projectile_world physics( glm::vec2(1000.0f, 1000.0f) );
+    bullet_world physics;
     soldier player(glm::vec2(0.0f, 0.0f), prand);
-    physics.add(player);
+
+    // Register collision dynamics
+    physics.addRigidBody(&player);
+    // Register biped to allow movement controls
+    physics.add( static_cast<biped &>(player) );
+    // Register shooter to allow shooting
+    physics.add( static_cast<shooter &>(player) );
 
     // Instantiate targets to shoot at
     std::vector<biped> test_bipeds;
@@ -223,7 +225,10 @@ int main(int argc, char * argv[])
       test_bipeds.emplace_back(
         start + glm::vec2( spacing*(i%width), spacing*(i/width) )
       );
-      physics.add( test_bipeds[i] );
+      // Register collision dynamics
+      physics.addRigidBody( &test_bipeds.back() );
+      // No need to register target bipeds
+      // physics.add( static_cast<biped &>(test_bipeds.back()) );
     }
 
     sdl media_layer(SDL_INIT_VIDEO);
@@ -275,27 +280,35 @@ int main(int argc, char * argv[])
 
       // Calculate segments from projectiles
       std::vector<segment> psegments;
-      for(auto i = physics.projectiles.begin();
-        i != physics.projectiles.end();
-        ++i)
-      {
+      for(auto i = player.projectiles.begin();
+          i != player.projectiles.end();
+          ++i)
         psegments.emplace_back(i->position, i->position - 0.01f*i->velocity);
-      }
 
-      // Render scene
+      // Clear screen
       ren.clear();
+      // Synchronize view with the camera
       ren.view( input.cam.view() );
+      // Draw the player
       ren.render(player.model(), test_biped_shape);
+      // Draw the target bipeds
       for(auto i = test_bipeds.begin(); i != test_bipeds.end(); ++i)
         ren.render(i->model(), test_biped_shape);
+      // Draw the player's weapon direction
       ren.render(turret_segment);
+      // Draw projectiles in-flight
       ren.render(psegments);
+      // Flip all drawings to the screen
       win.present();
 
-      // Advance
+      // Time how long the last frame required
       auto lap_time = timer.lap();
+      // Change the player's weapon direction
       player.weapon.step(lap_time);
+      // Move physics objects (including projectiles), fire new projectiles,
+      // apply forces, react to being shot
       physics.step(lap_time);
+      // Update camera position/orientation
       input.cam.step(lap_time);
     }
   }

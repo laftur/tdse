@@ -30,7 +30,7 @@ public:
   float target;
   float aim_angle() const;
   // Returns true when aimed at target
-  bool step(bullet_world::float_seconds time);
+  bool step(float_seconds time);
 
 private:
   float aim_angle_;

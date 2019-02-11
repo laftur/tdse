@@ -28,31 +28,26 @@ public:
   class properties
   {
   public:
-    properties(float m) : mass(m) {}
+    properties(float mass_);
+
     float mass;
   };
 
-  projectile(const properties & t, const glm::vec2 & p, const glm::vec2 & v);
-  glm::vec2 position, velocity;
+  projectile(const properties & type_,
+             const glm::vec2 & position_,
+             const glm::vec2 & velocity_);
+  projectile(const projectile & other);
+  projectile & operator=(const projectile & rhs) = delete;
+
+  // Returns true on collision, otherwise false
+  bool step(btCollisionWorld & world, float_seconds step);
 
   const properties & type;
-};
+  const glm::vec2 & position;
+  const glm::vec2 & velocity;
 
-
-#include <list>
-#include <vector>
-class hit_info;
-class projectile_world : public bullet_world
-{
-public:
-  // Boundary is how far out projectiles are tracked (rectangle half-extents)
-  projectile_world(const glm::vec2 & boundary_);
-
-  std::list<projectile> projectiles;
-  const glm::vec2 boundary;
-  static bullet_components components;
-
-  virtual void presubstep(bullet_world::float_seconds substep_time) override;
+private:
+  glm::vec2 position__, velocity__;
 };
 
 
@@ -60,9 +55,7 @@ class hit_info
 {
 public:
   hit_info(const projectile::properties & t, const glm::vec2 & v,
-    const glm::vec2 & p, const glm::vec2 & n)
-    : type(t), velocity(v), world_point(p), world_normal(n)
-  {}
+           const glm::vec2 & p, const glm::vec2 & n);
 
   const projectile::properties & type;
   glm::vec2 velocity;
@@ -78,19 +71,24 @@ public:
 };
 
 
-class shooter
+#include <list>
+class shooter : public needs_presubstep
 {
 public:
-  shooter(std::chrono::steady_clock::duration fire_period_);
+  shooter(float_seconds fire_period_);
+  shooter(const shooter & other);
+  shooter & operator=(const shooter & rhs) = delete;
+
   virtual projectile fire() = 0;
-  std::chrono::steady_clock::time_point next_fire() const;
 
   bool wants_fire;
-  const std::chrono::steady_clock::duration fire_period;
+  float_seconds fire_period;
+  const float_seconds & cooldown;
+  std::list<projectile> projectiles;
 
 private:
-  std::chrono::steady_clock::time_point next_fire_;
-  friend class projectile_world;
+  float_seconds cooldown_;
+  void presubstep(bullet_world & world, float_seconds substep_time) override;
 };
 
 

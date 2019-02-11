@@ -27,7 +27,7 @@ float turret::aim_angle() const
   return aim_angle_;
 }
 #include "glm.h"
-bool turret::step(bullet_world::float_seconds time)
+bool turret::step(float_seconds time)
 {
   float max_change = time.count()*aim_speed;
   float gap = rad_diff(aim_angle_, target);

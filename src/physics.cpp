@@ -44,57 +44,35 @@ bullet_components::bullet_components()
 }
 
 
-bullet_world::bullet_world(bullet_components & components)
-  : btDiscreteDynamicsWorld(&components.dispatcher,
-    &components.overlapping_pair_cache, &components.solver,
-    &components.collision_config)
+bullet_world::bullet_world()
+  : btDiscreteDynamicsWorld(&dispatcher, &overlapping_pair_cache, &solver,
+                            &collision_config)
 {
   setGravity(btVector3(0, 0, 0));
-  setInternalTickCallback(&presubstep_callback, 0, true);
 }
 
-void bullet_world::step(float_seconds time)
+const float_seconds bullet_world::fixed_substep(1.0f/60.0f);
+void bullet_world::step(float_seconds step_time)
 {
-  stepSimulation(time.count(), 10);  // max 10 sub-steps
-}
-void bullet_world::add(body & b)
-{
-  b.join(*this);
-}
-void bullet_world::add(btTypedConstraint & c)
-{
-  addConstraint(&c);
-}
-void bullet_world::remove(body & b)
-{
-  b.part(*this);
-}
-void bullet_world::remove(btTypedConstraint & c)
-{
-  removeConstraint(&c);
-}
-
-void bullet_world::presubstep_callback(btDynamicsWorld * world,
-  btScalar substep_time)
-{
-  static_cast<bullet_world &>(*world).presubstep
-    ( bullet_world::float_seconds(substep_time) );
+  // Limit to 10 substeps
+  stepSimulation( step_time.count(), 10, fixed_substep.count() );
 }
 void bullet_world::presubstep(float_seconds substep_time)
 {
-  btDispatcher & dispatcher = *(getDispatcher());
+  // Trigger all collision callbacks
+  btDispatcher & dispatcher = *( getDispatcher() );
   int manifolds = dispatcher.getNumManifolds();
   for(int i = 0; i != manifolds; ++i)
   {
-    btPersistentManifold & manifold
-      = *(dispatcher.getManifoldByIndexInternal(i));
+    btPersistentManifold & manifold =
+      *( dispatcher.getManifoldByIndexInternal(i) );
 
     int contacts = manifold.getNumContacts();
     for(int contact = 0; contact != contacts; ++contact)
     {
       if(manifold.getContactPoint(contact).getDistance() <= 0.0)
       {
-        // It's safe to modify bodies in the substep callback.
+        // It's safe to modify bodies between substeps
         body * body0 = static_cast<body *>
           ( const_cast<btCollisionObject *>(manifold.getBody0()) );
         body * body1 = static_cast<body *>
@@ -111,13 +89,25 @@ void bullet_world::presubstep(float_seconds substep_time)
     }
   }
 
-  btCollisionObjectArray & array = getCollisionObjectArray();
-  for(int i = 0; i < array.size(); ++i)
-  {
-    if(needs_presubstep * ptr =
-      dynamic_cast<needs_presubstep *>( static_cast<body *>(array[i]) )
-    ) ptr->presubstep(substep_time);
-  }
+  // Trigger all presubstep callbacks
+  for(auto i = presubsteps.begin(); i != presubsteps.end(); ++i)
+    (*i)->presubstep( *this, substep_time );
+
+  // Step physics world
+  btDiscreteDynamicsWorld::internalSingleStepSimulation( substep_time.count() );
+}
+void bullet_world::add(needs_presubstep & callback)
+{
+  presubsteps.insert(&callback);
+}
+void bullet_world::remove(needs_presubstep & callback)
+{
+  presubsteps.erase(&callback);
+}
+
+void bullet_world::internalSingleStepSimulation(btScalar timeStep)
+{
+  presubstep( float_seconds(timeStep) );
 }
 
 
@@ -165,12 +155,14 @@ void motion_state::setWorldTransform(const btTransform & world_trans)
 
 
 btRigidBody::btRigidBodyConstructionInfo body::info
-  ( btScalar mass, btMotionState & state, const btCollisionShape & shape,
-  const btVector3 & inertia = btVector3(0, 0, 0) )
+(btScalar mass,
+ btMotionState & state,
+ const btCollisionShape & shape,
+ const btVector3 & inertia)
 {
   btRigidBody::btRigidBodyConstructionInfo _info(
     mass, &state,
-    // Shapes can be shared between btRigidBody objects.
+    // Bodies never modify collision shapes, so I dunno why this isn't const
     const_cast<btCollisionShape *>(&shape),
     inertia
   );
@@ -178,7 +170,11 @@ btRigidBody::btRigidBodyConstructionInfo body::info
 
   return _info;
 }
-btVector3 body::calc_local_inertia(const btCollisionShape & shape, float mass)
+btVector3 body::calc_local_inertia
+(
+  const btCollisionShape & shape,
+  float mass
+)
 {
   btVector3 inertia;
   shape.calculateLocalInertia(mass, inertia);
@@ -215,13 +211,4 @@ glm::vec2 body::real_position() const
 {
   const btVector3 & origin = btRigidBody::getWorldTransform().getOrigin();
   return glm::vec2( origin.getX(), origin.getY() );
-}
-
-void body::join(btDiscreteDynamicsWorld & world)
-{
-  world.addRigidBody(this);
-}
-void body::part(btDiscreteDynamicsWorld & world)
-{
-  world.removeRigidBody(this);
 }

@@ -38,12 +38,12 @@ public:
   void force(const glm::vec2 & f);
 
 protected:
-  virtual void presubstep(bullet_world::float_seconds substep_time) override;
-  virtual void hit(const hit_info & info) override;
+  void presubstep(bullet_world & world, float_seconds substep_time) override;
+  void hit(const hit_info & info) override;
 
 private:
   bool can_sleep;
-  glm::vec2 _force;
+  glm::vec2 force_;
 };
 
 

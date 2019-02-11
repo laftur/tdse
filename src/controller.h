@@ -28,7 +28,7 @@ public:
 
   rot_ctrl(float _max_torque);
   float calc_torque(const body & b, float target,
-    bullet_world::float_seconds substep_time) const;
+                    float_seconds substep_time) const;
 };
 
 

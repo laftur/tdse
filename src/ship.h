@@ -46,8 +46,8 @@ public:
   void target_angle(float angle);
 
 protected:
-  virtual void presubstep(bullet_world::float_seconds substep_time) override;
-  virtual void hit(const hit_info & info) override;
+  void presubstep(bullet_world & world, float_seconds substep_time) override;
+  void hit(const hit_info & info) override;
 
 private:
   bool can_sleep;
