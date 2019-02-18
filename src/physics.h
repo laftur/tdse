@@ -97,6 +97,8 @@ public:
   virtual void presubstep(float_seconds substep_time);
   void add(needs_presubstep & callback);
   void remove(needs_presubstep & callback);
+  void add(body & b);
+  void remove(body & b);
 
 private:
   std::set<needs_presubstep *> presubsteps;

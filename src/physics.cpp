@@ -72,6 +72,7 @@ void bullet_world::presubstep(float_seconds substep_time)
     {
       if(manifold.getContactPoint(contact).getDistance() <= 0.0)
       {
+        // All btCollisionObect instances are assumed to be body instances
         // It's safe to modify bodies between substeps
         body * body0 = static_cast<body *>
           ( const_cast<btCollisionObject *>(manifold.getBody0()) );
@@ -103,6 +104,15 @@ void bullet_world::add(needs_presubstep & callback)
 void bullet_world::remove(needs_presubstep & callback)
 {
   presubsteps.erase(&callback);
+}
+
+void bullet_world::add(body & b)
+{
+  addRigidBody(&b);
+}
+void bullet_world::remove(body & b)
+{
+  removeRigidBody(&b);
 }
 
 void bullet_world::internalSingleStepSimulation(btScalar timeStep)

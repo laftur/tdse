@@ -207,10 +207,10 @@ int main(int argc, char * argv[])
     soldier player(glm::vec2(0.0f, 0.0f), prand);
 
     // Register collision dynamics
-    physics.addRigidBody(&player);
-    // Register biped to allow movement controls
-    physics.add( static_cast<biped &>(player) );
-    // Register shooter to allow shooting
+    physics.add( static_cast<body &>(player) );
+    // Movement controls are applied in between substeps
+    physics.add( static_cast<needs_presubstep &>(static_cast<biped &>(player)) );
+    // Projectiles are created and managed in between substeps
     physics.add( static_cast<shooter &>(player) );
 
     // Instantiate targets to shoot at
@@ -226,8 +226,8 @@ int main(int argc, char * argv[])
         start + glm::vec2( spacing*(i%width), spacing*(i/width) )
       );
       // Register collision dynamics
-      physics.addRigidBody( &test_bipeds.back() );
-      // No need to register target bipeds
+      physics.add( static_cast<body &>(test_bipeds.back()) );
+      // No need to register for movement controls (targets are dummies)
       // physics.add( static_cast<biped &>(test_bipeds.back()) );
     }
 

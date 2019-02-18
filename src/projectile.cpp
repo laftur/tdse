@@ -129,3 +129,31 @@ void shooter::presubstep(bullet_world & world, float_seconds substep_time)
     else cooldown_ = float_seconds(0.0f);
   }
 }
+
+
+actor::actor(float mass,
+             const btCollisionShape & shape,
+             const glm::vec2 & position)
+: body(mass, shape, position)
+{}
+void actor::force(const glm::vec2 & force_)
+{
+  btRigidBody::applyCentralForce( btVector3(force_.x, force_.y, 0.0f) );
+}
+void actor::torque(float torque_)
+{
+  btRigidBody::applyTorque( btVector3(0.0f, 0.0f, torque_) );
+}
+
+void actor::hit(const hit_info & info)
+{
+  btRigidBody::activate();
+
+  // Assume the projectile embedded itself
+  glm::vec2 momentum = info.velocity*info.type.mass;
+  glm::vec2 local_point = info.world_point - real_position();
+  btRigidBody::applyImpulse(
+    btVector3(momentum.x, momentum.y, 0.0f),
+    btVector3(local_point.x, local_point.y, 0.0f)
+  );
+}

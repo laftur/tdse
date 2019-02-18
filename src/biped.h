@@ -23,7 +23,7 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
 
 
-class biped : public body, public needs_presubstep, public needs_hit
+class biped : public actor, public needs_presubstep
 {
 public:
   static constexpr float size = 0.25f;
@@ -39,10 +39,8 @@ public:
 
 protected:
   void presubstep(bullet_world & world, float_seconds substep_time) override;
-  void hit(const hit_info & info) override;
 
 private:
-  bool can_sleep;
   glm::vec2 force_;
 };
 

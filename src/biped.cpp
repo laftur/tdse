@@ -21,11 +21,12 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 
 const btSphereShape biped::sphere(biped::size);
 const btConvex2dShape biped::circle
+  // btConvex2dShape never modifies the underlying btCollisionShape
   ( const_cast<btSphereShape *>(&biped::sphere) );
 
 #include <glm/gtc/matrix_transform.hpp>
 biped::biped(const glm::vec2 & position)
-: body(glm::pi<float>()*size*size*400.0f, circle, position),
+: actor(glm::pi<float>()*size*size*400.0f, circle, position),
   force_(0.0f, 0.0f)
 {
   // Disable rotation
@@ -38,11 +39,11 @@ const glm::vec2 & biped::force() const
 {
   return force_;
 }
-void biped::force(const glm::vec2 & f)
+void biped::force(const glm::vec2 & force__)
 {
-  float mag = glm::length(f);
-  if(mag <= max_linear_force) force_ = f;
-  else force_ = f*(max_linear_force/mag);
+  float mag = glm::length(force__);
+  if(mag <= max_linear_force) force_ = force__;
+  else force_ = force__*(max_linear_force/mag);
 }
 
 void biped::presubstep(bullet_world & world, float_seconds substep_time)
@@ -50,27 +51,15 @@ void biped::presubstep(bullet_world & world, float_seconds substep_time)
   if(force_.x != 0.0f || force_.y != 0.0f)
   {
     btRigidBody::activate();
-    applyCentralForce( btVector3(force_.x, force_.y, 0.0f) );
+    actor::force(force_);
     setDamping(0.5f, 0.0f);
   }
   else
   {
-    // Bipeds tend to stop suddenly
-    const btVector3 & btvel = getLinearVelocity();
+    // Running bipeds make less ground contact to be fast
+    const btVector3 & btvel = btRigidBody::getLinearVelocity();
     float speed_squared = btvel.getX()*btvel.getX() + btvel.getY()*btvel.getY();
     if(speed_squared < 40.0f) setDamping(0.95f, 0.0f);
     else setDamping(0.5f, 0.0f);
   }
-}
-void biped::hit(const hit_info & info)
-{
-  btRigidBody::activate();
-
-  // Assume the projectile embedded itself
-  glm::vec2 momentum = info.velocity*info.type.mass;
-  glm::vec2 local_point = info.world_point - real_position();
-  applyImpulse(
-    btVector3(momentum.x, momentum.y, 0.0f),
-    btVector3(local_point.x, local_point.y, 0.0f)
-  );
 }

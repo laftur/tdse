@@ -66,8 +66,9 @@ public:
 
 class needs_hit
 {
-public:
+protected:
   virtual void hit(const hit_info & info) = 0;
+  friend class projectile;
 };
 
 
@@ -86,9 +87,25 @@ public:
   const float_seconds & cooldown;
   std::list<projectile> projectiles;
 
+protected:
+  void presubstep(bullet_world & world, float_seconds substep_time) override;
+
 private:
   float_seconds cooldown_;
-  void presubstep(bullet_world & world, float_seconds substep_time) override;
+};
+
+
+class actor : public body, public needs_hit
+{
+public:
+  actor(float mass,
+        const btCollisionShape & shape,
+        const glm::vec2 & position);
+  void force(const glm::vec2 & force_);
+  void torque(float torque_);
+
+protected:
+  void hit(const hit_info & info) override;
 };
 
 
