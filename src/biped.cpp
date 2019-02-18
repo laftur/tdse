@@ -63,3 +63,25 @@ void biped::presubstep(bullet_world & world, float_seconds substep_time)
     else setDamping(0.5f, 0.0f);
   }
 }
+
+
+soldier::soldier(const glm::vec2 & position, std::default_random_engine & prand)
+: biped(position),
+  shooter( std::chrono::milliseconds(120) ),
+  bullet_type(0.008f),
+  weapon(8.0f),
+  prand_(prand)
+{}
+
+std::normal_distribution<float> soldier::normal_dist(0.0f, 0.02f);
+projectile soldier::fire()
+{
+  glm::vec2 velocity(400.0f, 0.0f);
+  glm::mat2 direction = mat2_from_angle( weapon.aim_angle()
+    + normal_dist(prand_) );
+  return projectile(
+    bullet_type,
+    real_position(),
+    direction*velocity
+  );
+}

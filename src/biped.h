@@ -45,4 +45,25 @@ private:
 };
 
 
+#include <random>
+#include "turret.h"
+class soldier : public biped, public shooter
+{
+public:
+  soldier(const glm::vec2 & position, std::default_random_engine & prand);
+  soldier(const soldier &) = delete;
+  void operator=(const soldier &) = delete;
+
+  projectile::properties bullet_type;
+  turret weapon;
+
+private:
+  std::default_random_engine & prand_;
+  static std::normal_distribution<float> normal_dist;
+
+protected:
+  projectile fire() override;
+};
+
+
 #endif  // BIPED_H_INCLUDED
