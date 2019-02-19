@@ -21,11 +21,13 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 
 const btSphereShape biped::sphere(biped::size);
 const btConvex2dShape biped::circle
+  // btConvex2dShape never modifies the underlying btCollisionShape
   ( const_cast<btSphereShape *>(&biped::sphere) );
 
+#include <glm/gtc/matrix_transform.hpp>
 biped::biped(const glm::vec2 & position)
-  : body(size*10.0f, circle, position),
-  _force(0.0f, 0.0f)
+: actor(glm::pi<float>()*size*size*400.0f, circle, position),
+  force_(0.0f, 0.0f)
 {
   // Disable rotation
   setAngularFactor(btVector3(0, 0, 0));
@@ -35,39 +37,51 @@ biped::biped(const glm::vec2 & position)
 
 const glm::vec2 & biped::force() const
 {
-  return _force;
+  return force_;
 }
-void biped::force(const glm::vec2 & f)
+void biped::force(const glm::vec2 & force__)
 {
-  float mag = glm::length(f);
-  if(mag <= max_linear_force) _force = f;
-  else _force = f*(max_linear_force/mag);
+  float mag = glm::length(force__);
+  if(mag <= max_linear_force) force_ = force__;
+  else force_ = force__*(max_linear_force/mag);
 }
 
-void biped::presubstep(bullet_world::float_seconds substep_time)
+void biped::presubstep(bullet_world & world, float_seconds substep_time)
 {
-  if(_force.x != 0.0f || _force.y != 0.0f)
+  if(force_.x != 0.0f || force_.y != 0.0f)
   {
     btRigidBody::activate();
-    applyCentralForce( btVector3(_force.x, _force.y, 0.0f) );
+    actor::force(force_);
     setDamping(0.5f, 0.0f);
   }
   else
   {
-    // Bipeds tend to stop suddenly
-    const btVector3 & btvel = getLinearVelocity();
+    // Running bipeds make less ground contact to be fast
+    const btVector3 & btvel = btRigidBody::getLinearVelocity();
     float speed_squared = btvel.getX()*btvel.getX() + btvel.getY()*btvel.getY();
     if(speed_squared < 40.0f) setDamping(0.95f, 0.0f);
     else setDamping(0.5f, 0.0f);
   }
 }
-void biped::hit(const hit_info & info)
+
+
+soldier::soldier(const glm::vec2 & position, std::default_random_engine & prand)
+: biped(position),
+  shooter( std::chrono::milliseconds(120) ),
+  bullet_type(0.008f),
+  weapon(8.0f),
+  prand_(prand)
+{}
+
+std::normal_distribution<float> soldier::normal_dist(0.0f, 0.02f);
+projectile soldier::fire()
 {
-  // Assume the projectile embedded itself
-  glm::vec2 momentum = info.velocity*info.type.mass;
-  glm::vec2 local_point = info.world_point - real_position();
-  applyImpulse(
-    btVector3(momentum.x, momentum.y, 0.0f),
-    btVector3(local_point.x, local_point.y, 0.0f)
+  glm::vec2 velocity(400.0f, 0.0f);
+  glm::mat2 direction = mat2_from_angle( weapon.aim_angle()
+    + normal_dist(prand_) );
+  return projectile(
+    bullet_type,
+    real_position(),
+    direction*velocity
   );
 }

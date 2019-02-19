@@ -81,26 +81,28 @@ private:
 
 
 #include <chrono>
+#include <set>
+typedef std::chrono::duration< float, std::ratio<1> > float_seconds;
+class needs_presubstep;
 class body;
-class bullet_world : public btDiscreteDynamicsWorld
+class bullet_world : public bullet_components, public btDiscreteDynamicsWorld
 {
 public:
-  bullet_world(bullet_components & components);
+  bullet_world();
   bullet_world(const bullet_world &) = delete;
   void operator = (const bullet_world &) = delete;
 
-  typedef std::chrono::duration< float, std::ratio<1> > float_seconds;
-
-  virtual void step(float_seconds time);
-
-  virtual void add(body & b);
-  virtual void add(btTypedConstraint & c);
-  virtual void remove(body & b);
-  virtual void remove(btTypedConstraint & c);
-
-  static void presubstep_callback(btDynamicsWorld * world,
-    btScalar substep_time);
+  static const float_seconds fixed_substep;
+  virtual void step(float_seconds step_time);
   virtual void presubstep(float_seconds substep_time);
+  void add(needs_presubstep & callback);
+  void remove(needs_presubstep & callback);
+  void add(body & b);
+  void remove(body & b);
+
+private:
+  std::set<needs_presubstep *> presubsteps;
+  void internalSingleStepSimulation(btScalar timeStep) override;
 };
 
 
@@ -126,24 +128,22 @@ private:
 class body : public motion_state, public btRigidBody
 {
 private:
-  static btRigidBody::btRigidBodyConstructionInfo info(btScalar m,
-    btMotionState & ms, const btCollisionShape & cs, const btVector3 & li);
+  static btRigidBody::btRigidBodyConstructionInfo info
+  (btScalar mass,
+   btMotionState & state,
+   const btCollisionShape & shape,
+   const btVector3 & inertia);
   static btVector3 calc_local_inertia(const btCollisionShape & shape,
-    float mass);
+                                      float mass);
 
 public:
-  body(float mass, const btCollisionShape & cs, const glm::vec2 & _position);
+  body(float mass, const btCollisionShape & cs, const glm::vec2 & position_);
 
   glm::mat3 real_transform() const;
   glm::mat2 real_orientation() const;
   glm::vec2 real_position() const;
 
   void warp(const glm::vec2 & new_pos);
-
-protected:
-  virtual void join(btDiscreteDynamicsWorld & world);
-  virtual void part(btDiscreteDynamicsWorld & world);
-  friend class bullet_world;
 };
 
 
@@ -155,7 +155,7 @@ public:
 class needs_presubstep
 {
 public:
-  virtual void presubstep(bullet_world::float_seconds substep_time) = 0;
+  virtual void presubstep(bullet_world & world, float_seconds substep_time) = 0;
 };
 
 

@@ -60,7 +60,7 @@ void ship::torque(float t)
   else torque_ = std::copysign(max_torque, t);
 }
 
-void ship::presubstep(bullet_world::float_seconds substep_time)
+void ship::presubstep(bullet_world & world, float_seconds substep_time)
 {
   glm::mat2 ori = real_orientation();
 

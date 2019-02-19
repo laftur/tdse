@@ -23,11 +23,11 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
 
 
-class biped : public body, public needs_presubstep, public needs_hit
+class biped : public actor, public needs_presubstep
 {
 public:
-  static constexpr float size = 1.0f;
-  static constexpr float max_linear_force = 128.0f;
+  static constexpr float size = 0.25f;
+  static constexpr float max_linear_force = 400.0f;
 
   static const btSphereShape sphere;
   static const btConvex2dShape circle;
@@ -38,12 +38,31 @@ public:
   void force(const glm::vec2 & f);
 
 protected:
-  virtual void presubstep(bullet_world::float_seconds substep_time) override;
-  virtual void hit(const hit_info & info) override;
+  void presubstep(bullet_world & world, float_seconds substep_time) override;
 
 private:
-  bool can_sleep;
-  glm::vec2 _force;
+  glm::vec2 force_;
+};
+
+
+#include <random>
+#include "turret.h"
+class soldier : public biped, public shooter
+{
+public:
+  soldier(const glm::vec2 & position, std::default_random_engine & prand);
+  soldier(const soldier &) = delete;
+  void operator=(const soldier &) = delete;
+
+  projectile::properties bullet_type;
+  turret weapon;
+
+private:
+  std::default_random_engine & prand_;
+  static std::normal_distribution<float> normal_dist;
+
+protected:
+  projectile fire() override;
 };
 
 

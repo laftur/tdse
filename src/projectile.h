@@ -28,28 +28,26 @@ public:
   class properties
   {
   public:
-    properties(float m) : mass(m) {}
+    properties(float mass_);
+
     float mass;
   };
 
-  projectile(const properties & t, const glm::vec2 & p, const glm::vec2 & v);
-  glm::vec2 position, velocity;
+  projectile(const properties & type_,
+             const glm::vec2 & position_,
+             const glm::vec2 & velocity_);
+  projectile(const projectile & other);
+  projectile & operator=(const projectile & rhs) = delete;
+
+  // Returns true on collision, otherwise false
+  bool step(btCollisionWorld & world, float_seconds step);
 
   const properties & type;
-};
+  const glm::vec2 & position;
+  const glm::vec2 & velocity;
 
-
-#include <list>
-#include <vector>
-class hit_info;
-class projectile_world : public bullet_world
-{
-public:
-  projectile_world(bullet_components & components);
-
-  std::list<projectile> projectiles;
-  std::vector<hit_info> hits;
-  virtual void presubstep(bullet_world::float_seconds time) override;
+private:
+  glm::vec2 position__, velocity__;
 };
 
 
@@ -57,9 +55,7 @@ class hit_info
 {
 public:
   hit_info(const projectile::properties & t, const glm::vec2 & v,
-    const glm::vec2 & p, const glm::vec2 & n)
-    : type(t), velocity(v), world_point(p), world_normal(n)
-  {}
+           const glm::vec2 & p, const glm::vec2 & n);
 
   const projectile::properties & type;
   glm::vec2 velocity;
@@ -70,8 +66,46 @@ public:
 
 class needs_hit
 {
-public:
+protected:
   virtual void hit(const hit_info & info) = 0;
+  friend class projectile;
+};
+
+
+#include <list>
+class shooter : public needs_presubstep
+{
+public:
+  shooter(float_seconds fire_period_);
+  shooter(const shooter & other);
+  shooter & operator=(const shooter & rhs) = delete;
+
+  virtual projectile fire() = 0;
+
+  bool wants_fire;
+  float_seconds fire_period;
+  const float_seconds & cooldown;
+  std::list<projectile> projectiles;
+
+protected:
+  void presubstep(bullet_world & world, float_seconds substep_time) override;
+
+private:
+  float_seconds cooldown_;
+};
+
+
+class actor : public body, public needs_hit
+{
+public:
+  actor(float mass,
+        const btCollisionShape & shape,
+        const glm::vec2 & position);
+  void force(const glm::vec2 & force_);
+  void torque(float torque_);
+
+protected:
+  void hit(const hit_info & info) override;
 };
 
 

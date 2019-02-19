@@ -29,7 +29,7 @@ public:
   const float max_torque;
 
   rotation_control(const body & rotating_body, float max_torque_);
-  float torque(bullet_world::float_seconds substep_time) const;
+  float torque(float_seconds substep_time) const;
 
   float target;
   bool stop;

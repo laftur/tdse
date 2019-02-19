@@ -27,7 +27,7 @@ rotation_control::rotation_control(const body & rotating_body,
   ),
   stop(false)
 {}
-float rotation_control::torque(bullet_world::float_seconds substep_time) const
+float rotation_control::torque(float_seconds substep_time) const
 {
   float angle = angle_from_mat2( subject.real_orientation() );
   float velocity = subject.getAngularVelocity().getZ();
