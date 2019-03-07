@@ -95,10 +95,11 @@ public:
   static const float_seconds fixed_substep;
   virtual void step(float_seconds step_time);
   virtual void presubstep(float_seconds substep_time);
-  void add(needs_presubstep & callback);
-  void remove(needs_presubstep & callback);
-  void add(body & b);
-  void remove(body & b);
+
+  void add_callback(needs_presubstep & callback);
+  void remove_callback(needs_presubstep & callback);
+  void add_body(body & b);
+  void remove_body(body & b);
 
 private:
   std::set<needs_presubstep *> presubsteps;

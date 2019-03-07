@@ -64,7 +64,7 @@ obstacle_grid::obstacle_grid(const glm::vec2 & origin, const glm::ivec2 & size)
 void obstacle_grid::join_world(bullet_world & physics)
 {
   for(auto i = obstacles_.begin(); i != obstacles_.end(); ++i)
-    physics.add(*i);
+    physics.add_body(*i);
 }
 const std::vector<obstacle> & obstacle_grid::obstacles()
 {
@@ -242,12 +242,12 @@ void soldier_demo()
     bullet_world physics;
     soldier player(glm::vec2(0.0f, 0.0f), prand);
 
-    // Register collision dynamics
-    physics.add( static_cast<body &>(player) );
-    // Movement controls are applied in between substeps
-    physics.add( static_cast<needs_presubstep &>(static_cast<biped &>(player)) );
-    // Projectiles are created and managed in between substeps
-    physics.add( static_cast<shooter &>(player) );
+    // Move player body based on collision dynamics
+    physics.add_body(player);
+    // Apply movement controls in between substeps
+    physics.add_callback( static_cast<biped &>(player) );
+    // Create and manage projectiles in between substeps
+    physics.add_callback( static_cast<shooter &>(player) );
 
     // Instantiate targets to shoot at
     std::vector<biped> test_bipeds;
@@ -261,10 +261,8 @@ void soldier_demo()
       test_bipeds.emplace_back(
         start + glm::vec2( spacing*(i%width), spacing*(i/width) )
       );
-      // Register collision dynamics
-      physics.add( static_cast<body &>(test_bipeds.back()) );
-      // No need to register for movement controls (targets are dummies)
-      // physics.add( static_cast<biped &>(test_bipeds.back()) );
+      // Move target bodies based on collision dynamics
+      physics.add_body( test_bipeds.back() );
     }
 
     sdl media_layer(SDL_INIT_VIDEO);
@@ -366,13 +364,10 @@ void ship_demo()
     bullet_world physics;
     ship player( glm::vec2(0.0f, 0.0f) );
 
-    {
-      ship & casted = static_cast<ship &>(player);
-      // Register collision dynamics
-      physics.add( static_cast<body &>(casted) );
-      // Movement controls are applied in between substeps
-      physics.add( static_cast<needs_presubstep &>(casted) );
-    }
+    // Move player body based on collision dynamics
+    physics.add_body(player);
+    // Apply movement controls in between substeps
+    physics.add_callback(player);
 
     // obstacle
     std::array<glm::vec2, 4> square_vertices = {

@@ -97,20 +97,20 @@ void bullet_world::presubstep(float_seconds substep_time)
   // Step physics world
   btDiscreteDynamicsWorld::internalSingleStepSimulation( substep_time.count() );
 }
-void bullet_world::add(needs_presubstep & callback)
+
+void bullet_world::add_callback(needs_presubstep & callback)
 {
   presubsteps.insert(&callback);
 }
-void bullet_world::remove(needs_presubstep & callback)
+void bullet_world::remove_callback(needs_presubstep & callback)
 {
   presubsteps.erase(&callback);
 }
-
-void bullet_world::add(body & b)
+void bullet_world::add_body(body & b)
 {
   addRigidBody(&b);
 }
-void bullet_world::remove(body & b)
+void bullet_world::remove_body(body & b)
 {
   removeRigidBody(&b);
 }
