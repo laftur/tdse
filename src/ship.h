@@ -26,17 +26,15 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 #include <array>
 
 
-class ship : public body, public needs_presubstep, public needs_hit
+class ship : public actor, public needs_presubstep
 {
 public:
   static constexpr float max_linear_force = 512.0f;
   static constexpr float max_torque = 64.0f;
-  static constexpr float projectile_mass = 0.1f;
 
   static const std::array<glm::vec2, 3> triangle_vertices;
   static const btConvexHullShape tprism;
   static const btConvex2dShape triangle;
-  static const projectile::properties projectile_type;
 
   ship(const glm::vec2 & position);
 
@@ -50,10 +48,8 @@ public:
 
 protected:
   void presubstep(bullet_world & world, float_seconds substep_time) override;
-  void hit(const hit_info & info) override;
 
 private:
-  bool can_sleep;
   glm::vec2 force_;
   float torque_;
 };

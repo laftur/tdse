@@ -16,7 +16,6 @@ You should have received a copy of the GNU Affero General Public License along
 with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 */
 #include "ship.h"
-#include <cmath>
 
 
 const std::array<glm::vec2, 3> ship::triangle_vertices = {
@@ -28,10 +27,9 @@ const btConvexHullShape ship::tprism = make_convex_hull
   (ship::triangle_vertices);
 const btConvex2dShape ship::triangle
   ( const_cast<btConvexHullShape *>(&ship::tprism) );
-const projectile::properties ship::projectile_type(ship::projectile_mass);
 
 ship::ship(const glm::vec2 & position)
-: body(64.0f, triangle, position),
+: actor(64.0f, triangle, position),
   rctrl(*this, 64.0f),
   rctrl_active(false),
   force_(0.0f, 0.0f),
@@ -54,6 +52,7 @@ float ship::torque() const
 {
   return torque_;
 }
+#include <cmath>
 void ship::torque(float t)
 {
   if(std::abs(t) <= max_torque) torque_ = t;
@@ -62,24 +61,12 @@ void ship::torque(float t)
 
 void ship::presubstep(bullet_world & world, float_seconds substep_time)
 {
-  glm::mat2 ori = real_orientation();
-
   if(force_.x != 0.0f || force_.y != 0.0f)
   {
-    glm::vec2 rotated_force = ori*force_;
+    glm::vec2 rotated_force = real_orientation()*force_;
     applyCentralForce( btVector3(rotated_force.x, rotated_force.y, 0.0f) );
   }
 
   if(rctrl_active) torque( rctrl.torque(substep_time) );
   applyTorque( btVector3(0.0f, 0.0f, torque_) );
-}
-void ship::hit(const hit_info & info)
-{
-  // Assume the projectile embedded itself
-  glm::vec2 momentum = info.velocity*info.type.mass;
-  glm::vec2 local_point = info.world_point - real_position();
-  applyImpulse(
-    btVector3(momentum.x, momentum.y, 0.0f),
-    btVector3(local_point.x, local_point.y, 0.0f)
-  );
 }
