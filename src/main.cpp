@@ -185,7 +185,7 @@ public:
     player.force(
       glm::vec2(wasd.x*biped::max_linear_force, wasd.y*biped::max_linear_force)
     );
-    player.wants_fire = space;
+    player.enabled = space;
     
     cam.magnification_velocity = zoom*1.0f;
   }

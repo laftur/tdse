@@ -33,10 +33,10 @@ projectile::projectile(const projectile & other)
   position__(other.position__), velocity__(other.velocity__)
 {}
 
-bool projectile::step(btCollisionWorld & world, float_seconds step)
+bool projectile::step(btCollisionWorld & world, float_seconds time)
 {
   // Calculate next position after step
-  glm::vec2 target = position__ + velocity__*step.count();
+  glm::vec2 target = position__ + velocity__*time.count();
   btVector3 bt_position(position__.x, position__.y, 0.0f),
             bt_target(target.x, target.y, 0.0f);
   position__ = target;
@@ -77,22 +77,59 @@ hit_info::hit_info(const projectile::properties & t, const glm::vec2 & v,
 {}
 
 
-shooter::shooter(float_seconds fire_period_)
-: wants_fire(false),
-  fire_period(
-    (fire_period_ > bullet_world::fixed_substep) ?
-    fire_period_ : bullet_world::fixed_substep
-  ),
+periodic::periodic(float_seconds period__)
+: enabled(false),
   cooldown(cooldown_),
-  cooldown_(0.0f)
+  cooldown_(0.0f),
+  period_(period__)
 {}
-shooter::shooter(const shooter & other)
-: wants_fire(false),
-  fire_period(other.fire_period),
+periodic::periodic(const periodic & other)
+: enabled(false),
   cooldown(cooldown_),
-  cooldown_(other.cooldown_)
+  cooldown_(other.cooldown_),
+  period_(other.period_)
 {}
+periodic & periodic::operator=(const periodic & rhs)
+{
+  cooldown_ = rhs.cooldown_;
+  period_ = rhs.period_;
 
+  return *this;
+}
+
+float_seconds periodic::period() const
+{
+  return period_;
+}
+void periodic::period(float_seconds period__)
+{
+  if(period__ > bullet_world::fixed_substep)
+    period_ = period__;
+  else
+    period_ = bullet_world::fixed_substep;
+}
+
+void periodic::presubstep(bullet_world & world, float_seconds substep_time)
+{
+  cooldown_ -= substep_time;
+  if(cooldown_.count() <= 0.0f)
+  {
+    // Period elapsed
+    if(enabled)
+    {
+      trigger(world, -cooldown_);
+
+      // Cool down until period has elapsed
+      cooldown_ += period_;
+    }
+    else cooldown_ = float_seconds(0.0f);
+  }
+}
+
+
+shooter::shooter(float_seconds fire_period)
+: periodic(fire_period)
+{}
 void shooter::presubstep(bullet_world & world, float_seconds substep_time)
 {
   // Projectiles outside boundary (square half-extents) are deleted
@@ -112,22 +149,16 @@ void shooter::presubstep(bullet_world & world, float_seconds substep_time)
     else ++i;
   }
 
-  cooldown_ -= substep_time;
-  if(cooldown_.count() <= 0.0f)
-  {
-    if(wants_fire)
-    {
-      // Create a new projectile
-      projectiles.emplace_back( fire() );
-      // Fire period usually elapses before the end of the substep,
-      // so step the new projectile ahead with the remaining substep time
-      if( projectiles.back().step(world, -cooldown_) ) projectiles.pop_back();
+  periodic::presubstep(world, substep_time);
+}
 
-      // Cool down until fire period has elapsed
-      cooldown_ += fire_period;
-    }
-    else cooldown_ = float_seconds(0.0f);
-  }
+void shooter::trigger(bullet_world & world, float_seconds remainder)
+{
+  // Create a new projectile
+  projectiles.emplace_back( fire() );
+  // Fire period usually elapses before the end of the substep,
+  // so step the new projectile ahead with the remaining substep time
+  if( projectiles.back().step(world, remainder) ) projectiles.pop_back();
 }
 
 

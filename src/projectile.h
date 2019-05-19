@@ -40,7 +40,7 @@ public:
   projectile & operator=(const projectile & rhs) = delete;
 
   // Returns true on collision, otherwise false
-  bool step(btCollisionWorld & world, float_seconds step);
+  bool step(btCollisionWorld & world, float_seconds time);
 
   const properties & type;
   const glm::vec2 & position;
@@ -72,26 +72,41 @@ protected:
 };
 
 
-#include <list>
-class shooter : public needs_presubstep
+class periodic : public needs_presubstep
 {
 public:
-  shooter(float_seconds fire_period_);
-  shooter(const shooter & other);
-  shooter & operator=(const shooter & rhs) = delete;
+  periodic(float_seconds period__);
+  periodic(const periodic & other);
+  periodic & operator=(const periodic & rhs);
 
-  virtual projectile fire() = 0;
+  float_seconds period() const;
+  void period(float_seconds period__);
 
-  bool wants_fire;
-  float_seconds fire_period;
+  bool enabled;
   const float_seconds & cooldown;
+  
+protected:
+  void presubstep(bullet_world & world, float_seconds substep_time) override;
+  virtual void trigger(bullet_world & world, float_seconds remainder) = 0;
+
+private:
+  float_seconds cooldown_;
+  float_seconds period_;
+};
+
+
+#include <list>
+class shooter : public periodic
+{
+public:
+  shooter(float_seconds fire_period);
+
   std::list<projectile> projectiles;
 
 protected:
   void presubstep(bullet_world & world, float_seconds substep_time) override;
-
-private:
-  float_seconds cooldown_;
+  virtual projectile fire() = 0;
+  void trigger(bullet_world & world, float_seconds remainder) override;
 };
 
 
