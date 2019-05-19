@@ -47,6 +47,7 @@ private:
 
 #include <random>
 #include "turret.h"
+#include "shooter.h"
 class soldier : public biped, public shooter
 {
 public:
