@@ -51,7 +51,9 @@ private:
 class soldier : public biped, public shooter
 {
 public:
-  soldier(const glm::vec2 & position, std::default_random_engine & prand);
+  soldier(const glm::vec2 & position,
+          const projectile::properties & bullet_type_,
+          std::default_random_engine & prand);
   soldier(const soldier &) = delete;
   void operator=(const soldier &) = delete;
 

@@ -70,3 +70,59 @@ void ship::presubstep(bullet_world & world, float_seconds substep_time)
   if(rctrl_active) torque( rctrl.torque(substep_time) );
   applyTorque( btVector3(0.0f, 0.0f, torque_) );
 }
+
+
+#include <chrono>
+warship::weapon::weapon(const warship & wielder_,
+                        const gun & aim_,
+                        const glm::vec2 & mount_point_,
+                        const projectile::properties & bullet_type_)
+: shooter( std::chrono::milliseconds(120) ),
+  wielder(wielder_),
+  aim(aim_),
+  mount_point(mount_point_),
+  bullet_type(bullet_type_)
+{}
+projectile warship::weapon::fire()
+{
+  glm::vec2 velocity(400.0f, 0.0f);
+  glm::mat2 direction = mat2_from_angle(
+    aim.aim_angle +
+    normal_dist(wielder.prand_)
+  ) * wielder.real_orientation();
+
+  return projectile(
+    bullet_type,
+    wielder.real_position(),
+    direction*velocity
+  );
+}
+std::normal_distribution<float> warship::weapon::normal_dist(0.0f, 0.02f);
+
+warship::warship(const glm::vec2 & position, std::default_random_engine & prand)
+: ship(position),
+  prand_(prand)
+{}
+
+void warship::add_weapon(const gun & aim_,
+                         const glm::vec2 & mount_point_,
+                         const projectile::properties & bullet_type_)
+{
+  weapons.emplace_back(*this, aim_, mount_point_, bullet_type_);
+}
+void warship::add_all(bullet_world & world)
+{
+  for(auto i = weapons.begin(); i != weapons.end(); ++i)
+    world.add_callback(*i);
+}
+void warship::remove_all(bullet_world & world)
+{
+  for(auto i = weapons.begin(); i != weapons.end(); ++i)
+    world.remove_callback(*i);
+}
+#include <iostream>
+void warship::fire(bool enable)
+{
+  for(auto i = weapons.begin(); i != weapons.end(); ++i)
+    i->enabled = enable;
+}

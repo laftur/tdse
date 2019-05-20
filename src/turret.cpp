@@ -18,28 +18,32 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 #include "turret.h"
 
 
-turret::turret(float aim_speed_)
-: aim_speed(aim_speed_), aim_angle_(0.0f)
+gun::gun()
+: aim_angle(0.0f)
+{}
+gun::gun(float aim_angle_)
+: aim_angle(aim_angle_)
 {}
 
-float turret::aim_angle() const
-{
-  return aim_angle_;
-}
+
+turret::turret(float aim_speed_)
+: aim_speed(aim_speed_)
+{}
+
 #include "glm.h"
 bool turret::step(float_seconds time)
 {
   float max_change = time.count()*aim_speed;
-  float gap = rad_diff(aim_angle_, target);
+  float gap = rad_diff(aim_angle, target);
   if(std::abs(gap) > max_change)
   {
-    if(gap > 0.0f) aim_angle_ -= max_change;
-    else aim_angle_ += max_change;
+    if(gap > 0.0f) aim_angle -= max_change;
+    else aim_angle += max_change;
     return false;
   }
   else
   {
-    aim_angle_ = target;
+    aim_angle = target;
     return true;
   }
 }

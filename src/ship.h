@@ -55,4 +55,47 @@ private:
 };
 
 
+#include <vector>
+#include <random>
+#include "turret.h"
+#include "shooter.h"
+class warship : public ship
+{
+public:
+  class weapon : public shooter
+  {
+  public:
+    weapon(const warship & wielder_,
+           const gun & aim_,
+           const glm::vec2 & mount_point_,
+           const projectile::properties & bullet_type_);
+    projectile fire() override;
+
+    const warship & wielder;
+    const gun & aim;
+    glm::vec2 mount_point;
+    projectile::properties bullet_type;
+
+  private:
+    static std::normal_distribution<float> normal_dist;
+  };
+
+  std::vector<weapon> weapons;
+
+  warship(const glm::vec2 & position, std::default_random_engine & prand);
+  // Create a new weapon
+  void add_weapon(const gun & aim_,
+                  const glm::vec2 & mount_point_,
+                  const projectile::properties & bullet_type_);
+  // Helpers to register all weapons at once
+  void add_all(bullet_world & world);
+  void remove_all(bullet_world & world);
+  // Helpers to enable/disable all weapons at once
+  void fire(bool enable);
+
+private:
+  std::default_random_engine & prand_;
+};
+
+
 #endif  // SHIP_H_INCLUDED

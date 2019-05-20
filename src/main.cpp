@@ -47,28 +47,36 @@ obstacle::obstacle(const glm::vec2 & position)
 class obstacle_grid
 {
 public:
-  obstacle_grid(const glm::vec2 & origin, const glm::ivec2 & size);
-  void join_world(bullet_world & physics);
-  const std::vector<obstacle> & obstacles();
+  obstacle_grid( const glm::vec2 & origin,
+                 const glm::ivec2 & size,
+                 const glm::vec2 & spacing = glm::vec2(10.0f, 10.0f) );
+  void add_all(bullet_world & physics);
+  void remove_all(bullet_world & physics);
+
+  const std::vector<obstacle> & obstacles;
 
 private:
   std::vector<obstacle> obstacles_;
 };
-obstacle_grid::obstacle_grid(const glm::vec2 & origin, const glm::ivec2 & size)
+obstacle_grid::obstacle_grid(const glm::vec2 & origin,
+                             const glm::ivec2 & size,
+                             const glm::vec2 & spacing)
+: obstacles(obstacles_)
 {
   obstacles_.reserve(size.x*size.y);
   for(int x = 0; x < size.x; ++x)
     for(int y = 0; y < size.y; ++y)
-      obstacles_.emplace_back( origin + glm::vec2(x*10, y*10) );
+      obstacles_.emplace_back( origin + glm::vec2(x*spacing.x, y*spacing.y) );
 }
-void obstacle_grid::join_world(bullet_world & physics)
+void obstacle_grid::add_all(bullet_world & physics)
 {
   for(auto i = obstacles_.begin(); i != obstacles_.end(); ++i)
     physics.add_body(*i);
 }
-const std::vector<obstacle> & obstacle_grid::obstacles()
+void obstacle_grid::remove_all(bullet_world & physics)
 {
-  return obstacles_;
+  for(auto i = obstacles_.begin(); i != obstacles_.end(); ++i)
+    physics.remove_body(*i);
 }
 
 
@@ -152,8 +160,15 @@ public:
       break;
     }
   }
+  void apply_input()
+  {
+    cam.magnification_velocity = zoom;
+  }
   void apply_input(ship & player)
   {
+    apply_input();
+    cam.position = player.position();
+
     // Apply control inputs to player object
     player.force( glm::vec2(wasd.y*ship::max_linear_force, 0.0f) );
     if(wasd.x == 0)
@@ -166,12 +181,24 @@ public:
       player.torque(-player.max_torque*wasd.x);
       player.rctrl_active = false;
     }
-    
-    cam.magnification_velocity = zoom*1.0f;
-    cam.position = player.position();
+  }
+  void apply_input(warship & player)
+  {
+    apply_input( static_cast<ship &>(player) );
+    player.fire(space);
+  }
+  void apply_input(biped & player)
+  {
+    apply_input();
+
+    player.force(
+      glm::vec2(wasd.x*biped::max_linear_force, wasd.y*biped::max_linear_force)
+    );
   }
   void apply_input(soldier & player)
   {
+    apply_input( static_cast<biped &>(player) );
+
     // Transform mouse coordinates to world space
     auto window_size = win_.size();
     glm::vec2 view_pos(mouse.x - window_size.x/2.0f,
@@ -182,12 +209,8 @@ public:
     // Apply control inputs to player object
     glm::vec2 player_dist = world_pos - player.position();
     player.weapon.target = glm::atan(player_dist.y, player_dist.x);
-    player.force(
-      glm::vec2(wasd.x*biped::max_linear_force, wasd.y*biped::max_linear_force)
-    );
+
     player.enabled = space;
-    
-    cam.magnification_velocity = zoom*1.0f;
   }
 
 private:
@@ -240,7 +263,9 @@ void soldier_demo()
     }
     std::default_random_engine prand(seed);
     bullet_world physics;
-    soldier player(glm::vec2(0.0f, 0.0f), prand);
+    soldier player(glm::vec2(0.0f, 0.0f),
+                   projectile::properties(0.008f),
+                   prand);
 
     // Move player body based on collision dynamics
     physics.add_body(player);
@@ -306,7 +331,7 @@ void soldier_demo()
       input.apply_input(player);
 
       // Calculate turret appearance
-      float turret_aim = player.weapon.aim_angle();
+      float turret_aim = player.weapon.aim_angle;
       glm::vec2 turret_end( biped::size*glm::cos(turret_aim),
         biped::size*glm::sin(turret_aim) );
       segment turret_segment( player.position() );
@@ -362,14 +387,23 @@ void ship_demo()
     }
     std::default_random_engine prand(seed);
     bullet_world physics;
-    ship player( glm::vec2(0.0f, 0.0f) );
+    ship opponent( glm::vec2(60.0f, 60.0f) );
 
-    // Move player body based on collision dynamics
+    warship player( glm::vec2(0.0f, 0.0f), prand );
+    gun left_gun(0.0f);
+    gun right_gun(0.0f);
+    const projectile::properties test_bullet(0.008f);
+    player.add_weapon(left_gun, glm::vec2(0.2f, 0.0f), test_bullet);
+    player.add_weapon(right_gun, glm::vec2(-0.2f, 0.0f), test_bullet);
+    player.add_all(physics);
+
+    // Move ships based on collision dynamics
     physics.add_body(player);
+    physics.add_body(opponent);
     // Apply movement controls in between substeps
     physics.add_callback(player);
 
-    // obstacle
+    // obstacles
     std::array<glm::vec2, 4> square_vertices = {
       glm::vec2(1.0f, 1.0f),
       glm::vec2(-1.0f, 1.0f),
@@ -378,9 +412,9 @@ void ship_demo()
     };
     auto square_prism = make_convex_hull(square_vertices);
     btConvex2dShape square(&square_prism);
-    obstacle_grid infinite_squares( glm::vec2(-55.0f, -55.0f),
+    obstacle_grid squares( glm::vec2(-55.0f, -55.0f),
       glm::ivec2(12, 12) );
-    infinite_squares.join_world(physics);
+    squares.add_all(physics);
 
     sdl media_layer(SDL_INIT_VIDEO);
     media_layer.gl_version(1, 4);
@@ -414,29 +448,15 @@ void ship_demo()
       }
       input.apply_input(player);
 
-      // edge warping
-      auto pos = player.real_position();
-      const float limit = 5.0f;
-      if(pos.x > limit)
-      {
-        pos.x -= 2*limit;
-        player.warp(pos);
-      }
-      else if(pos.x < -limit)
-      {
-        pos.x += 2*limit;
-        player.warp(pos);
-      }
-      if(pos.y > limit)
-      {
-        pos.y -= 2*limit;
-        player.warp(pos);
-      }
-      else if(pos.y < -limit)
-      {
-        pos.y += 2*limit;
-        player.warp(pos);
-      }
+      // Calculate segments from projectiles
+      std::vector<segment> psegments;
+      for(auto wep = player.weapons.begin();
+          wep != player.weapons.end();
+          ++wep)
+        for(auto i = wep->projectiles.begin();
+            i != wep->projectiles.end();
+            ++i)
+          psegments.emplace_back(i->position, i->position - 0.01f*i->velocity);
 
       // Clear screen
       ren.clear();
@@ -444,14 +464,18 @@ void ship_demo()
       ren.view( input.cam.view() );
       // Draw the player
       ren.render(player.model(), ship_shape);
+      // Draw opponent
+      ren.render(opponent.model(), ship_shape);
       // Draw obstacles
       std::vector<glm::mat3> models;
-      models.reserve( infinite_squares.obstacles().size() );
-      for(auto i = infinite_squares.obstacles().begin();
-        i < infinite_squares.obstacles().end();
-        ++i)
+      models.reserve( squares.obstacles.size() );
+      for(auto i = squares.obstacles.begin();
+          i < squares.obstacles.end();
+          ++i)
         models.push_back( i->model() );
       ren.render(models, square_shape);
+      // Draw projectiles in-flight
+      ren.render(psegments);
       // Flip all drawings to the screen
       win.present();
 

@@ -19,8 +19,18 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 #define TURRET_H_INCLUDED
 
 
+class gun
+{
+public:
+  gun();
+  gun(float aim_angle_);
+
+  float aim_angle;
+};
+
+
 #include "physics.h"
-class turret
+class turret : public gun
 {
 public:
   turret(float aim_speed_);
@@ -28,12 +38,8 @@ public:
   const float aim_speed;
 
   float target;
-  float aim_angle() const;
   // Returns true when aimed at target
   bool step(float_seconds time);
-
-private:
-  float aim_angle_;
 };
 
 
