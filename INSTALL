@@ -13,7 +13,7 @@ help with other advanced configuration options, run './configure --help'.
 
   BUILDING
 
-To build, run 'make'.
+To build, run 'make'. Run the demo with 'cd src/demo && ./demo'.
 
 
   INSTALLATION
