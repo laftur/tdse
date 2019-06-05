@@ -3,6 +3,7 @@
 *~
 *.log
 *.o
+*.tar.gz
 
 autom4te.cache
 stamp-h1
@@ -20,4 +21,6 @@ Makefile.in
 depcomp
 install-sh
 missing
-src/tdse
+ar-lib
+src/libtdse.a
+src/demo/demo

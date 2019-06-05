@@ -1,4 +1,4 @@
-SUBDIRS = src
+SUBDIRS = $(LIB_SUBDIR) $(DEMO_SUBDIR)
+DIST_SUBDIRS = src src/demo
 doc_DATA = README NEWS COPYING
-pkgdata_DATA = data/vertex.glsl data/fragment.glsl
-EXTRA_DIST = data/vertex.glsl data/fragment.glsl
+AM_DISTCHECK_CONFIGURE_FLAGS = --enable-demo

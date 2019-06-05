@@ -175,11 +175,11 @@ renderer::renderer(window & w)
   ogl( _target->context() ),
   gpu_program{
     glsl_shader(
-      {DATA_DIR "/vertex.glsl"},
+      {"vertex.glsl"},
       GL_VERTEX_SHADER
     ),
     glsl_shader(
-      {DATA_DIR "/fragment.glsl"},
+      {"fragment.glsl"},
       GL_FRAGMENT_SHADER
     )
   }

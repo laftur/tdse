@@ -3,17 +3,12 @@
 Run 'autoreconf --install' to install the build system, which will require GNU
 autotools. To configure this package for building and installation, simply run
 './configure'. This will check your system for dependencies and other things.
-Unless you're cross-compiling or otherwise know what you're doing, proceed to
-BUILDING. To configure for building on a particular platform, specify
-'--build=platform'. To configure building for a particular platform, specify
-'--host=platform'. For example:
+You may also supply configuration options, like so:
 
-  './configure --build=i686-pc-linux-gnu --host=i586-mingw32msvc'
+  './configure --enable-demo'
 
-Will configure the package for use on i586-mingw32msvc, but to be built on
-GNU/Linux.
-
-For help with other advanced configuration options, run './configure --help'.
+This will enable building the demo, with graphics to show what TDSE can do. For
+help with other advanced configuration options, run './configure --help'.
 
 
   BUILDING
