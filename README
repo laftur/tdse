@@ -10,6 +10,11 @@ As the project develops, documentation will be provided on function and features
 as they are added. For now, TDSE is little more than a demonstration. Its
 function and features are subject to substantial changes.
 
+To run the demo program, first it must be built (see INSTALL). Before running,
+ensure your working directory is that of the demo program (src/demo). Try
+running 'cd src/demo && ./demo'. The demo will always search the current working
+directory for its graphics shader files (*.glsl).
+
 TDSE is developed and maintained by Jeremy Starnes. For questions and comments
 regarding TDSE that are not bug reports or feature requests, you may send emails
 to <laftur.jeremy@gmail.com>.
