@@ -36,7 +36,7 @@ public:
   static const btConvexHullShape tprism;
   static const btConvex2dShape triangle;
 
-  ship(const glm::vec2 & position);
+  ship(const glm::mat3 & transform);
 
   const glm::vec2 & force() const;
   void force(const glm::vec2 & f);
@@ -82,7 +82,7 @@ public:
 
   std::vector<weapon> weapons;
 
-  warship(const glm::vec2 & position, std::default_random_engine & prand);
+  warship(const glm::mat3 & transform, std::default_random_engine & prand);
   // Create a new weapon
   void add_weapon(const gun & aim_,
                   const glm::vec2 & mount_point_,

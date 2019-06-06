@@ -56,6 +56,7 @@ template<class T> btConvexHullShape make_convex_hull(const T & vertices)
 
 glm::mat2 bt_to_glm2d(const btMatrix3x3 & btmat);
 glm::mat3 bt_to_glm2d(const btTransform & bttrans);
+btTransform glm2d_to_bt(const glm::mat3 & glmtrans);
 
 
 class bullet_world;
@@ -110,13 +111,11 @@ private:
 class motion_state : public btMotionState
 {
 public:
-  motion_state(const glm::vec2 & position, const glm::mat2 & orientation);
+  motion_state(const glm::mat3 & transform_);
 
   glm::mat3 model() const;
   glm::mat2 orientation() const;
   glm::vec2 position() const;
-
-  //void warp(const glm::vec2 & new_pos);
 
 private:
   btTransform transform;
@@ -138,13 +137,15 @@ private:
                                       float mass);
 
 public:
-  body(float mass, const btCollisionShape & cs, const glm::vec2 & position_);
+  body(float mass,
+       const btCollisionShape & cs,
+       const glm::mat3 & transform);
 
   glm::mat3 real_transform() const;
   glm::mat2 real_orientation() const;
   glm::vec2 real_position() const;
 
-  void warp(const glm::vec2 & new_pos);
+  void warp(const glm::mat3 & new_trans);
 };
 
 

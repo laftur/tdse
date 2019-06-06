@@ -33,6 +33,17 @@ glm::mat3 bt_to_glm2d(const btTransform & bttrans)
     bt_to_glm2d( bttrans.getBasis() )
   );
 }
+btTransform glm2d_to_bt(const glm::mat3 & glmtrans)
+{
+  return btTransform(
+    btMatrix3x3(
+      glmtrans[0][0], glmtrans[1][0], 0.0,
+      glmtrans[0][1], glmtrans[1][1], 0.0,
+      0.0,            0.0,            1.0
+    ),
+    btVector3(glmtrans[2].x, glmtrans[2].y, 0.0)
+  );
+}
 
 
 bullet_components::bullet_components()
@@ -121,16 +132,8 @@ void bullet_world::internalSingleStepSimulation(btScalar timeStep)
 }
 
 
-motion_state::motion_state( const glm::vec2 & position,
-  const glm::mat2 & orientation = glm::mat2(1.0) )
-  : transform(
-      btMatrix3x3(
-        orientation[0][0], orientation[1][0], 0.0,
-        orientation[0][1], orientation[1][1], 0.0,
-        0.0, 0.0, 1.0
-      ),
-      btVector3(position.x, position.y, 0.0)
-    )
+motion_state::motion_state(const glm::mat3 & transform_)
+: transform( glm2d_to_bt(transform_) )
 {}
 
 glm::mat3 motion_state::model() const
@@ -193,11 +196,10 @@ btVector3 body::calc_local_inertia
 
 
 #include <glm/gtc/matrix_transform.hpp>
-body::body(float mass, const btCollisionShape & shape,
-  const glm::vec2 & _position)
-  : motion_state(_position, glm::mat2
-     ( glm::rotate(glm::mat4(1.0), 0.0f, glm::vec3(0.0, 0.0, 1.0)) )
-  ),
+body::body(float mass,
+           const btCollisionShape & shape,
+           const glm::mat3 & transform)
+: motion_state(transform),
   btRigidBody( info(
     mass, *this, shape,
     calc_local_inertia(shape, mass)
@@ -223,9 +225,7 @@ glm::vec2 body::real_position() const
   return glm::vec2( origin.getX(), origin.getY() );
 }
 
-void body::warp(const glm::vec2 & new_pos)
+void body::warp(const glm::mat3 & new_trans)
 {
-  btVector3 & pos = btRigidBody::getWorldTransform().getOrigin();
-  pos.setX(new_pos.x);
-  pos.setY(new_pos.y);
+  btRigidBody::setWorldTransform( glm2d_to_bt(new_trans) );
 }

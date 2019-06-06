@@ -28,8 +28,8 @@ const btConvexHullShape ship::tprism = make_convex_hull
 const btConvex2dShape ship::triangle
   ( const_cast<btConvexHullShape *>(&ship::tprism) );
 
-ship::ship(const glm::vec2 & position)
-: actor(64.0f, triangle, position),
+ship::ship(const glm::mat3 & transform)
+: actor(64.0f, triangle, transform),
   rctrl(*this, 64.0f),
   rctrl_active(false),
   force_(0.0f, 0.0f),
@@ -99,8 +99,8 @@ projectile warship::weapon::fire()
 }
 std::normal_distribution<float> warship::weapon::normal_dist(0.0f, 0.02f);
 
-warship::warship(const glm::vec2 & position, std::default_random_engine & prand)
-: ship(position),
+warship::warship(const glm::mat3 & transform, std::default_random_engine & prand)
+: ship(transform),
   prand_(prand)
 {}
 

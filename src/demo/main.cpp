@@ -41,7 +41,7 @@ const btConvex2dShape obstacle::square(
   const_cast<btConvexHullShape *>(&square_prism)
 );
 obstacle::obstacle(const glm::vec2 & position)
-: body(0.0f, square, position)
+: body( 0.0f, square, compose_transform(position) )
 {}
 #include <vector>
 class obstacle_grid
@@ -387,9 +387,9 @@ void ship_demo()
     }
     std::default_random_engine prand(seed);
     bullet_world physics;
-    ship opponent( glm::vec2(60.0f, 60.0f) );
+    ship opponent( compose_transform(glm::vec2(60.0f, 60.0f)) );
 
-    warship player( glm::vec2(0.0f, 0.0f), prand );
+    warship player( compose_transform(glm::vec2(0.0f, 0.0f)), prand );
     gun left_gun(0.0f);
     gun right_gun(0.0f);
     const projectile::properties test_bullet(0.008f);

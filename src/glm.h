@@ -43,8 +43,8 @@ std::ostream & operator << (std::ostream & stream, const glm::mat4 & m);
 
 glm::mat2 mat2_from_angle(float angle);
 float angle_from_mat2(const glm::mat2 & matrix);
-glm::mat3 compose_transform(const glm::vec2 & position,
-  const glm::mat2 & orientation);
+glm::mat3 compose_transform( const glm::vec2 & position,
+  const glm::mat2 & orientation = glm::mat2(1.0f) );
 
 float rad_diff(float a1, float a2);
 

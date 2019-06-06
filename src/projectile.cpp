@@ -79,8 +79,8 @@ hit_info::hit_info(const projectile::properties & t, const glm::vec2 & v,
 
 actor::actor(float mass,
              const btCollisionShape & shape,
-             const glm::vec2 & position)
-: body(mass, shape, position)
+             const glm::mat3 & transform)
+: body(mass, shape, transform)
 {}
 void actor::force(const glm::vec2 & force_)
 {

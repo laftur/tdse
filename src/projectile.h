@@ -77,7 +77,7 @@ class actor : public body, public needs_hit
 public:
   actor(float mass,
         const btCollisionShape & shape,
-        const glm::vec2 & position);
+        const glm::mat3 & transform);
   void force(const glm::vec2 & force_);
   void torque(float torque_);
 
