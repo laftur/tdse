@@ -48,7 +48,9 @@ AS_IF([test "$enable_demo" = yes],
       [PKG_CHECK_MODULES(SDL2, sdl2 >= 1.11)
        PKG_CHECK_MODULES(GL, gl)
        PKG_CHECK_MODULES(GLEW, glew >= 1.12)
-       AC_SUBST(DEMO_SUBDIR, [src/demo])],
+       AC_SUBST(DEMO_SUBDIR, [src/demo])]
+       AC_CONFIG_LINKS([src/demo/fragment.glsl:src/demo/fragment.glsl
+                        src/demo/vertex.glsl:src/demo/vertex.glsl]),
       [])
 
 # The application can access compile-time configuration via config.h
