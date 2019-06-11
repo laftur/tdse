@@ -499,8 +499,8 @@ int main(int argc, char * argv[])
 {
   const char * usage_message =
     "Usage:\n"
-    "projectile demo:  " PACKAGE "\n"
-    "spaceship demo:   " PACKAGE " space";
+    "projectile demo:  demo\n"
+    "spaceship demo:   demo space";
 
   switch(argc)
   {
