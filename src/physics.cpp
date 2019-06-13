@@ -70,6 +70,13 @@ void bullet_world::step(float_seconds step_time)
 }
 void bullet_world::presubstep(float_seconds substep_time)
 {
+  // Trigger all presubstep callbacks
+  for(auto i = presubsteps.begin(); i != presubsteps.end(); ++i)
+    (*i)->presubstep( *this, substep_time );
+
+  // Step physics world
+  btDiscreteDynamicsWorld::internalSingleStepSimulation( substep_time.count() );
+
   // Trigger all collision callbacks
   btDispatcher & dispatcher = *( getDispatcher() );
   int manifolds = dispatcher.getNumManifolds();
@@ -100,13 +107,6 @@ void bullet_world::presubstep(float_seconds substep_time)
       }
     }
   }
-
-  // Trigger all presubstep callbacks
-  for(auto i = presubsteps.begin(); i != presubsteps.end(); ++i)
-    (*i)->presubstep( *this, substep_time );
-
-  // Step physics world
-  btDiscreteDynamicsWorld::internalSingleStepSimulation( substep_time.count() );
 }
 
 void bullet_world::add_callback(needs_presubstep & callback)
