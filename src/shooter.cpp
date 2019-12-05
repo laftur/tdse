@@ -4,9 +4,10 @@
 periodic::periodic(float_seconds period__)
 : enabled(false),
   cooldown(cooldown_),
-  cooldown_(0.0f),
-  period_(period__)
-{}
+  cooldown_(0.0f)
+{
+  period(period__);
+}
 periodic::periodic(const periodic & other)
 : enabled(false),
   cooldown(cooldown_),
@@ -27,26 +28,26 @@ float_seconds periodic::period() const
 }
 void periodic::period(float_seconds period__)
 {
-  if(period__ > bullet_world::fixed_substep)
-    period_ = period__;
-  else
-    period_ = bullet_world::fixed_substep;
+  if(period__.count() <= 0.0f)
+    throw std::invalid_argument("period must be greater than zero");
+  period_ = period__;
 }
 
 void periodic::presubstep(bullet_world & world, float_seconds substep_time)
 {
   cooldown_ -= substep_time;
-  if(cooldown_.count() <= 0.0f)
+  while(cooldown_.count() <= 0.0f)
   {
-    // Period elapsed
     if(enabled)
     {
       trigger(world, -cooldown_);
-
-      // Cool down until period has elapsed
       cooldown_ += period_;
     }
-    else cooldown_ = float_seconds(0.0f);
+    else
+    {
+      cooldown_ = float_seconds(0.0f);
+      break;
+    }
   }
 }
 
