@@ -28,9 +28,10 @@ public:
   class properties
   {
   public:
-    properties(float mass_);
+    properties(float mass_, float range);
 
     float mass;
+    float range_squared;
   };
 
   projectile(const properties & type_,
@@ -47,7 +48,7 @@ public:
   const glm::vec2 & velocity;
 
 private:
-  glm::vec2 position__, velocity__;
+  glm::vec2 position__, velocity__, origin;
 };
 
 

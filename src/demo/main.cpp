@@ -264,7 +264,7 @@ void soldier_demo()
     std::default_random_engine prand(seed);
     bullet_world physics;
     soldier player(glm::vec2(0.0f, 0.0f),
-                   projectile::properties(0.008f),
+                   projectile::properties(0.008f, 1000.0f),
                    prand);
 
     // Move player body based on collision dynamics
@@ -392,7 +392,7 @@ void ship_demo()
     warship player( compose_transform(glm::vec2(0.0f, 0.0f)), prand );
     gun left_gun(0.0f);
     gun right_gun(0.0f);
-    const projectile::properties test_bullet(0.008f);
+    const projectile::properties test_bullet(0.008f, 1000.0f);
     player.add_weapon(left_gun, glm::vec2(0.2f, 0.0f), test_bullet);
     player.add_weapon(right_gun, glm::vec2(-0.2f, 0.0f), test_bullet);
     player.add_all(physics);

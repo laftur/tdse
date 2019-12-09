@@ -35,16 +35,25 @@ void periodic::period(float_seconds period__)
 
 void periodic::presubstep(bullet_world & world, float_seconds substep_time)
 {
+  // Take from cooldown the time that passed
   cooldown_ -= substep_time;
+  // Negative cooldown means we became ready partway through this step (common).
   while(cooldown_.count() <= 0.0f)
   {
     if(enabled)
     {
+      // Ready to fire, and willing
+      // The negative cooldown shows how much time passed after firing
       trigger(world, -cooldown_);
+      // It's possible to fire multiple times per step.
+      // In such a case, -cooldown > period,
+      // meaning enough time passed after firing to fire again.
       cooldown_ += period_;
     }
     else
     {
+      // Ready, but not willing
+      // The negative cooldown doesn't matter since we're not willing to fire.
       cooldown_ = float_seconds(0.0f);
       break;
     }
@@ -57,19 +66,11 @@ shooter::shooter(float_seconds fire_period)
 {}
 void shooter::presubstep(bullet_world & world, float_seconds substep_time)
 {
-  // Projectiles outside boundary (square half-extents) are deleted
-  static constexpr float boundary = 1000.0f;
-
   // Step all projectiles
   for(auto i = projectiles.begin(); i != projectiles.end(); )
   {
-    // Erase projectiles that pass boundary or collide
-    auto position = i->position;
-    if( position.x >  boundary ||
-        position.x < -boundary ||
-        position.y >  boundary ||
-        position.y < -boundary ||
-        i->step(world, substep_time) )
+    // Erase projectiles that collide or expire
+    if( i->step(world, substep_time) )
       i = projectiles.erase(i);  // Erase returns next projectile.
     else ++i;
   }

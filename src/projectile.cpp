@@ -18,23 +18,28 @@ with TDSE; see the file COPYING. If not, see <http://www.gnu.org/licenses/agpl>
 #include "projectile.h"
 
 
-projectile::properties::properties(float mass_)
-: mass(mass_)
+projectile::properties::properties(float mass_, float range)
+: mass(mass_), range_squared(range*range)
 {}
 
 projectile::projectile(const properties & type_,
                        const glm::vec2 & position_,
                        const glm::vec2 & velocity_)
 : position(position__), velocity(velocity__), type(type_),
-  position__(position_), velocity__(velocity_)
+  position__(position_), velocity__(velocity_), origin(position__)
 {}
 projectile::projectile(const projectile & other)
 : position(position__), velocity(velocity__), type(other.type),
-  position__(other.position__), velocity__(other.velocity__)
+  position__(other.position__), velocity__(other.velocity__), origin(position__)
 {}
 
 bool projectile::step(btCollisionWorld & world, float_seconds time)
 {
+  // Return early if we're too far from the origin
+  auto diff = position__ - origin;
+  if(diff.x*diff.x + diff.y*diff.y > type.range_squared)
+    return true;
+
   // Calculate next position after step
   glm::vec2 target = position__ + velocity__*time.count();
   btVector3 bt_position(position__.x, position__.y, 0.0f),
