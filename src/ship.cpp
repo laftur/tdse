@@ -30,7 +30,7 @@ const btConvex2dShape ship::triangle
 
 ship::ship(const glm::mat3 & transform)
 : actor(64.0f, triangle, transform),
-  rctrl(*this, 64.0f),
+  rctrl(*this, max_torque),
   rctrl_active(false),
   force_(0.0f, 0.0f),
   torque_(0.0f)
@@ -62,13 +62,10 @@ void ship::torque(float t)
 void ship::presubstep(bullet_world & world, float_seconds substep_time)
 {
   if(force_.x != 0.0f || force_.y != 0.0f)
-  {
-    glm::vec2 rotated_force = real_orientation()*force_;
-    applyCentralForce( btVector3(rotated_force.x, rotated_force.y, 0.0f) );
-  }
+    actor::force(real_orientation()*force_);
 
-  if(rctrl_active) torque( rctrl.torque(substep_time) );
-  applyTorque( btVector3(0.0f, 0.0f, torque_) );
+  if(rctrl_active) actor::torque( rctrl.torque(substep_time) );
+  else actor::torque(torque_);
 }
 
 

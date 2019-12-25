@@ -31,6 +31,9 @@ float rotation_control::torque(float_seconds substep_time) const
 {
   float angle = angle_from_mat2( subject.real_orientation() );
   float velocity = subject.getAngularVelocity().getZ();
+
+  // Give up early if we're already stopped
+  if(velocity == 0.0f) return 0.0f;
   float max_accel = std::copysign(max_torque*inertia, -velocity);
   float time_to_stop = std::abs(velocity/max_accel);
 
