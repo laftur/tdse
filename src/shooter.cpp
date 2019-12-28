@@ -3,23 +3,9 @@
 
 periodic::periodic(float_seconds period__)
 : enabled(false),
-  cooldown(cooldown_),
-  cooldown_(0.0f)
+  cooldown(0.0f)
 {
   period(period__);
-}
-periodic::periodic(const periodic & other)
-: enabled(false),
-  cooldown(cooldown_),
-  cooldown_(other.cooldown_),
-  period_(other.period_)
-{}
-periodic & periodic::operator=(const periodic & rhs)
-{
-  cooldown_ = rhs.cooldown_;
-  period_ = rhs.period_;
-
-  return *this;
 }
 
 float_seconds periodic::period() const
@@ -36,25 +22,25 @@ void periodic::period(float_seconds period__)
 void periodic::presubstep(bullet_world & world, float_seconds substep_time)
 {
   // Take from cooldown the time that passed
-  cooldown_ -= substep_time;
+  cooldown -= substep_time;
   // Negative cooldown means we became ready partway through this step (common).
-  while(cooldown_.count() <= 0.0f)
+  while(cooldown.count() <= 0.0f)
   {
     if(enabled)
     {
       // Ready to fire, and willing
       // The negative cooldown shows how much time passed after firing
-      trigger(world, -cooldown_);
+      trigger(world, -cooldown);
       // It's possible to fire multiple times per step.
       // In such a case, -cooldown > period,
       // meaning enough time passed after firing to fire again.
-      cooldown_ += period_;
+      cooldown += period_;
     }
     else
     {
       // Ready, but not willing
       // The negative cooldown doesn't matter since we're not willing to fire.
-      cooldown_ = float_seconds(0.0f);
+      cooldown = float_seconds(0.0f);
       break;
     }
   }

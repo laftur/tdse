@@ -37,15 +37,13 @@ public:
   projectile(const properties & type_,
              const glm::vec2 & position_,
              const glm::vec2 & velocity_);
-  projectile(const projectile & other);
-  projectile & operator=(const projectile & rhs) = delete;
 
   // Returns true on collision, otherwise false
   bool step(btCollisionWorld & world, float_seconds time);
+  const glm::vec2 & position() const;
+  const glm::vec2 & velocity() const;
 
   const properties & type;
-  const glm::vec2 & position;
-  const glm::vec2 & velocity;
 
 private:
   glm::vec2 position__, velocity__, origin;

@@ -342,7 +342,10 @@ void soldier_demo()
       for(auto i = player.projectiles.begin();
           i != player.projectiles.end();
           ++i)
-        psegments.emplace_back(i->position, i->position - 0.01f*i->velocity);
+        psegments.emplace_back(
+          i->position(),
+          i->position() - 0.01f*i->velocity()
+        );
 
       // Clear screen
       ren.clear();
@@ -456,7 +459,10 @@ void ship_demo()
         for(auto i = wep->projectiles.begin();
             i != wep->projectiles.end();
             ++i)
-          psegments.emplace_back(i->position, i->position - 0.01f*i->velocity);
+          psegments.emplace_back(
+            i->position(),
+            i->position() - 0.01f*i->velocity()
+          );
 
       // Clear screen
       ren.clear();

@@ -25,12 +25,7 @@ projectile::properties::properties(float mass_, float range)
 projectile::projectile(const properties & type_,
                        const glm::vec2 & position_,
                        const glm::vec2 & velocity_)
-: position(position__), velocity(velocity__), type(type_),
-  position__(position_), velocity__(velocity_), origin(position__)
-{}
-projectile::projectile(const projectile & other)
-: position(position__), velocity(velocity__), type(other.type),
-  position__(other.position__), velocity__(other.velocity__), origin(position__)
+: type(type_), position__(position_), velocity__(velocity_), origin(position__)
 {}
 
 bool projectile::step(btCollisionWorld & world, float_seconds time)
@@ -73,6 +68,14 @@ bool projectile::step(btCollisionWorld & world, float_seconds time)
 
   // No collision detected
   return false;
+}
+const glm::vec2 & projectile::position() const
+{
+  return position__;
+}
+const glm::vec2 & projectile::velocity() const
+{
+  return velocity__;
 }
 
 
