@@ -2,8 +2,7 @@
 
 
 periodic::periodic(float_seconds period__)
-: enabled(false),
-  cooldown(0.0f)
+: cooldown(0.0f)
 {
   period(period__);
 }
@@ -19,36 +18,31 @@ void periodic::period(float_seconds period__)
   period_ = period__;
 }
 
-void periodic::presubstep(bullet_world & world, float_seconds substep_time)
+void periodic::step(float_seconds time)
 {
   // Take from cooldown the time that passed
-  cooldown -= substep_time;
+  cooldown -= time;
+}
+bool periodic::ready() const
+{
   // Negative cooldown means we became ready partway through this step (common).
-  while(cooldown.count() <= 0.0f)
-  {
-    if(enabled)
-    {
-      // Ready to fire, and willing
-      // The negative cooldown shows how much time passed after firing
-      trigger(world, -cooldown);
-      // It's possible to fire multiple times per step.
-      // In such a case, -cooldown > period,
-      // meaning enough time passed after firing to fire again.
-      cooldown += period_;
-    }
-    else
-    {
-      // Ready, but not willing
-      // The negative cooldown doesn't matter since we're not willing to fire.
-      cooldown = float_seconds(0.0f);
-      break;
-    }
-  }
+  return cooldown.count() <= 0.0f;
+}
+float_seconds periodic::trigger()
+{
+  float_seconds time_after = -cooldown;
+  cooldown += period_;
+  return time_after;
+}
+void periodic::reset()
+{
+  cooldown = float_seconds(0.0f);
 }
 
 
 shooter::shooter(float_seconds fire_period)
-: periodic(fire_period)
+: periodic(fire_period),
+  enabled(false)
 {}
 void shooter::presubstep(bullet_world & world, float_seconds substep_time)
 {
@@ -61,14 +55,23 @@ void shooter::presubstep(bullet_world & world, float_seconds substep_time)
     else ++i;
   }
 
-  periodic::presubstep(world, substep_time);
-}
+  step(substep_time);
+  while( ready() )
+  {
+    if(enabled)
+    {
+      float_seconds remainder = trigger();
 
-void shooter::trigger(bullet_world & world, float_seconds remainder)
-{
-  // Create a new projectile
-  projectiles.emplace_back( fire() );
-  // Fire period usually elapses before the end of the substep,
-  // so step the new projectile ahead with the remaining substep time
-  if( projectiles.back().step(world, remainder) ) projectiles.pop_back();
+      // Create a new projectile
+      projectiles.emplace_back( fire() );
+      // Fire period usually elapses before the end of the substep,
+      // so step the new projectile ahead with the remaining substep time
+      if( projectiles.back().step(world, remainder) ) projectiles.pop_back();
+    }
+    else
+    {
+      reset();
+      break;
+    }
+  }
 }

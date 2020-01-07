@@ -70,56 +70,102 @@ void ship::presubstep(bullet_world & world, float_seconds substep_time)
 
 
 #include <chrono>
-warship::weapon::weapon(const warship & wielder_,
-                        const gun & aim_,
-                        const glm::vec2 & mount_point_,
-                        const projectile::properties & bullet_type_)
-: shooter( std::chrono::milliseconds(120) ),
-  wielder(wielder_),
-  aim(aim_),
+warship::weapon::weapon(const glm::vec2 & mount_point_,
+                        const projectile::properties & bullet__)
+: periodic( std::chrono::milliseconds(120) ),
   mount_point(mount_point_),
-  bullet_type(bullet_type_)
+  enabled(false),
+  bullet_(&bullet__)
 {}
-projectile warship::weapon::fire()
+const projectile::properties & warship::weapon::bullet() const
 {
-  glm::vec2 velocity(400.0f, 0.0f);
-  glm::mat2 direction = mat2_from_angle(
-    aim.aim_angle +
-    normal_dist(wielder.prand_)
-  ) * wielder.real_orientation();
-
-  return projectile(
-    bullet_type,
-    wielder.real_position(),
-    direction*velocity
-  );
+  return *bullet_;
 }
-std::normal_distribution<float> warship::weapon::normal_dist(0.0f, 0.02f);
+void warship::weapon::bullet(const projectile::properties & type)
+{
+  bullet_ = &type;
+}
 
-warship::warship(const glm::mat3 & transform, std::default_random_engine & prand)
-: ship(transform),
-  prand_(prand)
+
+warship::platform::platform(const glm::vec2 & offset_, float offset_angle_)
+: offset(offset_), offset_angle(offset_angle_)
 {}
-
-void warship::add_weapon(const gun & aim_,
-                         const glm::vec2 & mount_point_,
-                         const projectile::properties & bullet_type_)
-{
-  weapons.emplace_back(*this, aim_, mount_point_, bullet_type_);
-}
-void warship::add_all(bullet_world & world)
-{
-  for(auto i = weapons.begin(); i != weapons.end(); ++i)
-    world.add_callback(*i);
-}
-void warship::remove_all(bullet_world & world)
-{
-  for(auto i = weapons.begin(); i != weapons.end(); ++i)
-    world.remove_callback(*i);
-}
-#include <iostream>
-void warship::fire(bool enable)
+void warship::platform::fire(bool enable)
 {
   for(auto i = weapons.begin(); i != weapons.end(); ++i)
     i->enabled = enable;
+  for(auto i = subplatforms.begin(); i != subplatforms.end(); ++i)
+    i->fire(enable);
 }
+
+
+warship::warship(const glm::mat3 & transform, std::default_random_engine & prand)
+: ship(transform),
+  weapon_tree(glm::vec2(0.0f, 0.0f), 0.0f),
+  prand_(prand)
+{}
+
+void warship::step(const glm::vec2 & offset,
+                   const glm::mat2 & offset_orientation,
+                   platform & tree, bullet_world & world, float_seconds time)
+{
+  glm::vec2 velocity;
+  {
+    const btVector3 & btvel = btRigidBody::getLinearVelocity();
+    velocity.x = btvel.getX();
+    velocity.y = btvel.getY();
+  }
+
+  glm::vec2 tree_position = tree.offset + offset;
+  glm::mat2 tree_orientation =
+    mat2_from_angle(tree.offset_angle)*offset_orientation;
+
+  for(auto wpn = tree.weapons.begin(); wpn != tree.weapons.end(); ++wpn)
+  {
+    wpn->step(time);
+    while( wpn->ready() )
+    {
+      if(wpn->enabled)
+      {
+        float_seconds remainder = wpn->trigger();
+        glm::mat2 orientation =
+          mat2_from_angle( normal_dist(prand_) ) * tree_orientation;
+
+        // Create a new projectile
+        projectiles.emplace_back(
+          wpn->bullet(),
+          offset_orientation*wpn->mount_point + tree_position,
+          orientation*glm::vec2(400.0f, 0.0f) + velocity
+        );
+        // Fire period usually elapses before the end of the step,
+        // so step the new projectile ahead by the remaining time
+        if( projectiles.back().step(world, remainder) ) projectiles.pop_back();
+      }
+      else
+      {
+        wpn->reset();
+        break;
+      }
+    }
+  }
+  for(auto i = tree.subplatforms.begin(); i != tree.subplatforms.end(); ++i)
+    step(tree_position, tree_orientation, *i, world, time);
+}
+void warship::presubstep(bullet_world & world, float_seconds substep_time)
+{
+  ship::presubstep(world, substep_time);
+
+  // Step all projectiles
+  for(auto i = projectiles.begin(); i != projectiles.end(); )
+  {
+    // Erase projectiles that collide or expire
+    if( i->step(world, substep_time) )
+      i = projectiles.erase(i);
+    else ++i;
+  }
+
+  // Fire all weapons and step subplatforms
+  step(real_position(), real_orientation(), weapon_tree, world, substep_time);
+}
+
+std::normal_distribution<float> warship::normal_dist(0.0f, 0.02f);

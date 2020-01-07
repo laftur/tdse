@@ -55,46 +55,56 @@ private:
 };
 
 
-#include <vector>
+#include <list>
 #include <random>
 #include "turret.h"
 #include "shooter.h"
 class warship : public ship
 {
 public:
-  class weapon : public shooter
+  class weapon : public periodic
   {
   public:
-    weapon(const warship & wielder_,
-           const gun & aim_,
-           const glm::vec2 & mount_point_,
-           const projectile::properties & bullet_type_);
-    projectile fire() override;
+    weapon(const glm::vec2 & mount_point_,
+           const projectile::properties & type);
+    const projectile::properties & bullet() const;
+    void bullet(const projectile::properties & bullet__);
 
-    const warship & wielder;
-    const gun & aim;
     glm::vec2 mount_point;
-    projectile::properties bullet_type;
+    bool enabled;
 
   private:
-    static std::normal_distribution<float> normal_dist;
+    const projectile::properties * bullet_;
   };
 
-  std::vector<weapon> weapons;
+
+  class platform
+  {
+  public:
+    platform(const glm::vec2 & offset_, float offset_angle_);
+    // Helper to fire/stop all weapons and subplatforms
+    void fire(bool enable);
+
+    glm::vec2 offset;
+    float offset_angle;
+    std::list<weapon> weapons;
+    std::list<platform> subplatforms;
+  };
+
+
+  platform weapon_tree;
+  std::list<projectile> projectiles;
 
   warship(const glm::mat3 & transform, std::default_random_engine & prand);
-  // Create a new weapon
-  void add_weapon(const gun & aim_,
-                  const glm::vec2 & mount_point_,
-                  const projectile::properties & bullet_type_);
-  // Helpers to register all weapons at once
-  void add_all(bullet_world & world);
-  void remove_all(bullet_world & world);
-  // Helpers to enable/disable all weapons at once
-  void fire(bool enable);
+
+protected:
+  void step(const glm::vec2 & offset, const glm::mat2 & offset_orientation,
+            platform & tree, bullet_world & world, float_seconds time);
+  void presubstep(bullet_world & world, float_seconds substep_time) override;
 
 private:
   std::default_random_engine & prand_;
+  static std::normal_distribution<float> normal_dist;
 };
 
 

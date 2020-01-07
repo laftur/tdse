@@ -3,7 +3,7 @@
 #include "projectile.h"
 
 
-class periodic : public needs_presubstep
+class periodic
 {
 public:
   periodic(float_seconds period__);
@@ -11,12 +11,16 @@ public:
   float_seconds period() const;
   void period(float_seconds period__);
 
-  bool enabled;
+  // Set how much time passed
+  void step(float_seconds time);
+  // Returns true if trigger is ready
+  bool ready() const;
+  // Returns time remaining after triggering
+  float_seconds trigger();
+  // Forget about remaining triggers this step
+  void reset();
+
   float_seconds cooldown;
-  
-protected:
-  void presubstep(bullet_world & world, float_seconds substep_time) override;
-  virtual void trigger(bullet_world & world, float_seconds remainder) = 0;
 
 private:
   float_seconds period_;
@@ -24,17 +28,17 @@ private:
 
 
 #include <list>
-class shooter : public periodic
+class shooter : public periodic, public needs_presubstep
 {
 public:
   shooter(float_seconds fire_period);
 
   std::list<projectile> projectiles;
+  bool enabled;
 
 protected:
   void presubstep(bullet_world & world, float_seconds substep_time) override;
   virtual projectile fire() = 0;
-  void trigger(bullet_world & world, float_seconds remainder) override;
 };
 
 

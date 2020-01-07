@@ -185,7 +185,7 @@ public:
   void apply_input(warship & player)
   {
     apply_input( static_cast<ship &>(player) );
-    player.fire(space);
+    player.weapon_tree.fire(space);
   }
   void apply_input(biped & player)
   {
@@ -393,17 +393,14 @@ void ship_demo()
     ship opponent( compose_transform(glm::vec2(60.0f, 60.0f)) );
 
     warship player( compose_transform(glm::vec2(0.0f, 0.0f)), prand );
-    gun left_gun(0.0f);
-    gun right_gun(0.0f);
     const projectile::properties test_bullet(0.008f, 1000.0f);
-    player.add_weapon(left_gun, glm::vec2(0.2f, 0.0f), test_bullet);
-    player.add_weapon(right_gun, glm::vec2(-0.2f, 0.0f), test_bullet);
-    player.add_all(physics);
+    player.weapon_tree.weapons.emplace_back(glm::vec2(0.0f,  0.25f), test_bullet);
+    player.weapon_tree.weapons.emplace_back(glm::vec2(0.0f, -0.25f), test_bullet);
 
     // Move ships based on collision dynamics
     physics.add_body(player);
     physics.add_body(opponent);
-    // Apply movement controls in between substeps
+    // Apply movement controls and fire weapons in between substeps
     physics.add_callback(player);
 
     // obstacles
@@ -453,16 +450,13 @@ void ship_demo()
 
       // Calculate segments from projectiles
       std::vector<segment> psegments;
-      for(auto wep = player.weapons.begin();
-          wep != player.weapons.end();
-          ++wep)
-        for(auto i = wep->projectiles.begin();
-            i != wep->projectiles.end();
-            ++i)
-          psegments.emplace_back(
-            i->position(),
-            i->position() - 0.01f*i->velocity()
-          );
+      for(auto i = player.projectiles.begin();
+          i != player.projectiles.end();
+          ++i)
+        psegments.emplace_back(
+          i->position(),
+          i->position() - 0.01f*i->velocity()
+        );
 
       // Clear screen
       ren.clear();

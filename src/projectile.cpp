@@ -47,7 +47,6 @@ bool projectile::step(btCollisionWorld & world, float_seconds time)
   if(result.m_collisionObject)
   {
     // Collision happened
-
     body * victim = static_cast<body *>
       // It's safe to modify btCollisionObjects in between substeps
       ( const_cast<btCollisionObject *>(result.m_collisionObject) );
