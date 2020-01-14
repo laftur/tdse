@@ -80,150 +80,6 @@ void obstacle_grid::remove_all(bullet_world & physics)
 }
 
 
-#include "biped.h"
-#include "ship.h"
-#include "camera.h"
-#include "shape_renderer.h"
-class human_interface
-{
-public:
-  human_interface(window & win)
-  : win_(win),
-    wasd(0, 0), mouse(0, 0), zoom(0), space(false),
-    cam(glm::vec2(0.0f, 0.0f), 0.0f, 40.0f)
-  {
-    win_.input_handler(
-      std::bind(&human_interface::handle_input, this, std::placeholders::_1)
-    );
-  }
-  void handle_input(const SDL_Event & event)
-  {
-    switch(event.type)
-    {
-    case SDL_KEYDOWN:
-      if(event.key.repeat) break;
-      switch(event.key.keysym.scancode)
-      {
-      case SDL_SCANCODE_W:
-        wasd.y += 1;
-        break;
-      case SDL_SCANCODE_A:
-        wasd.x -= 1;
-        break;
-      case SDL_SCANCODE_S:
-        wasd.y -= 1;
-        break;
-      case SDL_SCANCODE_D:
-        wasd.x += 1;
-        break;
-      case SDL_SCANCODE_SPACE:
-        space = true;
-        break;
-      case SDL_SCANCODE_R:
-        zoom += 1;
-        break;
-      case SDL_SCANCODE_F:
-        zoom -= 1;
-        break;
-      }
-      break;
-    case SDL_KEYUP:
-      if(event.key.repeat) break;
-      switch(event.key.keysym.scancode)
-      {
-      case SDL_SCANCODE_W:
-        wasd.y -= 1;
-        break;
-      case SDL_SCANCODE_A:
-        wasd.x += 1;
-        break;
-      case SDL_SCANCODE_S:
-        wasd.y += 1;
-        break;
-      case SDL_SCANCODE_D:
-        wasd.x -= 1;
-        break;
-      case SDL_SCANCODE_SPACE:
-        space = false;
-        break;
-      case SDL_SCANCODE_R:
-        zoom -= 1;
-        break;
-      case SDL_SCANCODE_F:
-        zoom += 1;
-        break;
-      }
-      break;
-    case SDL_MOUSEMOTION:
-      mouse.x = event.motion.x;
-      mouse.y = event.motion.y;
-      break;
-    }
-  }
-  void apply_input()
-  {
-    cam.magnification_velocity = zoom;
-  }
-  void apply_input(ship & player)
-  {
-    apply_input();
-    cam.position = player.position();
-
-    // Apply control inputs to player object
-    player.force( glm::vec2(wasd.y*ship::max_linear_force, 0.0f) );
-    if(wasd.x == 0)
-    {
-      player.rctrl.stop = true;
-      player.rctrl_active = true;
-    }
-    else
-    {
-      player.torque(-player.max_torque*wasd.x);
-      player.rctrl_active = false;
-    }
-  }
-  void apply_input(warship & player)
-  {
-    apply_input( static_cast<ship &>(player) );
-    player.weapon_tree.fire(space);
-  }
-  void apply_input(biped & player)
-  {
-    apply_input();
-
-    player.force(
-      glm::vec2(wasd.x*biped::max_linear_force, wasd.y*biped::max_linear_force)
-    );
-  }
-  void apply_input(soldier & player)
-  {
-    apply_input( static_cast<biped &>(player) );
-
-    // Transform mouse coordinates to world space
-    auto window_size = win_.size();
-    glm::vec2 view_pos(mouse.x - window_size.x/2.0f,
-      window_size.y/2.0f - mouse.y);
-    glm::vec2 world_pos = cam.transform()
-      *glm::vec3(view_pos/cam.magnification, 1.0f);
-
-    // Apply control inputs to player object
-    glm::vec2 player_dist = world_pos - player.position();
-    player.weapon.target = glm::atan(player_dist.y, player_dist.x);
-
-    player.enabled = space;
-  }
-
-private:
-  window & win_;
-  glm::ivec2 wasd, mouse;
-  float zoom;
-  bool space;
-
-public:
-  kinematic_camera cam;
-};
-
-
 #include <chrono>
 #include <thread>
 class lap_timer
@@ -252,6 +108,8 @@ private:
 
 
 #include <glm/gtc/constants.hpp>
+#include "player.h"
+#include "shape_renderer.h"
 void soldier_demo()
 {
   try
@@ -263,16 +121,16 @@ void soldier_demo()
     }
     std::default_random_engine prand(seed);
     bullet_world physics;
-    soldier player(glm::vec2(0.0f, 0.0f),
-                   projectile::properties(0.008f, 1000.0f),
-                   prand);
+    soldier player_body(glm::vec2(0.0f, 0.0f),
+                        projectile::properties(0.008f, 1000.0f),
+                        prand);
 
     // Move player body based on collision dynamics
-    physics.add_body(player);
+    physics.add_body(player_body);
     // Apply movement controls in between substeps
-    physics.add_callback( static_cast<biped &>(player) );
+    physics.add_callback( static_cast<biped &>(player_body) );
     // Create and manage projectiles in between substeps
-    physics.add_callback( static_cast<shooter &>(player) );
+    physics.add_callback( static_cast<shooter &>(player_body) );
 
     // Instantiate targets to shoot at
     std::vector<biped> test_bipeds;
@@ -292,9 +150,8 @@ void soldier_demo()
 
     sdl media_layer(SDL_INIT_VIDEO);
     media_layer.gl_version(1, 4);
-    window win( media_layer, "", glm::ivec2(640, 480) );
-    shape_renderer ren(win);
-    human_interface input(win);
+    local_player player_io(media_layer);
+    shape_renderer ren(player_io.interface);
 
     // Construct circle shape
     constexpr int num_circle_vertices = 8;
@@ -318,6 +175,52 @@ void soldier_demo()
     lap_timer timer;
     while(!quit)
     {
+      // Calculate turret appearance
+      float turret_aim = player_body.weapon.aim_angle;
+      glm::vec2 turret_end( biped::size*glm::cos(turret_aim),
+        biped::size*glm::sin(turret_aim) );
+      segment turret_segment( player_body.position() );
+      turret_segment.end = turret_segment.start + turret_end;
+
+      // Calculate segments from projectiles
+      std::vector<segment> psegments;
+      for(auto i = player_body.projectiles.begin();
+          i != player_body.projectiles.end();
+          ++i)
+        psegments.emplace_back(
+          i->position(),
+          i->position() - 0.01f*i->velocity()
+        );
+
+      // Set camera to follow player object
+      player_io.view.position = player_body.position();
+      // Synchronize view with the camera
+      ren.view( player_io.view.view() );
+      // Clear screen
+      ren.clear();
+      // Draw the player
+      ren.render(player_body.model(), test_biped_shape);
+      // Draw the target bipeds
+      for(auto i = test_bipeds.begin(); i != test_bipeds.end(); ++i)
+        ren.render(i->model(), test_biped_shape);
+      // Draw the player's weapon direction
+      ren.render(turret_segment);
+      // Draw projectiles in-flight
+      ren.render(psegments);
+      // Flip all drawings to the screen
+      player_io.interface.present();
+
+      // Time how long the last frame required
+      auto lap_time = timer.lap();
+      // Update player's weapon direction
+      player_body.weapon.step(lap_time);
+      // Move physics objects (including projectiles), fire new projectiles,
+      // apply forces, react to being shot
+      physics.step(lap_time);
+      // Update camera position/orientation
+      player_io.view.step(lap_time);
+
+      // Process user input
       SDL_Event event;
       while( media_layer.poll(event) )
       {
@@ -328,50 +231,7 @@ void soldier_demo()
           break;
         }
       }
-      input.apply_input(player);
-
-      // Calculate turret appearance
-      float turret_aim = player.weapon.aim_angle;
-      glm::vec2 turret_end( biped::size*glm::cos(turret_aim),
-        biped::size*glm::sin(turret_aim) );
-      segment turret_segment( player.position() );
-      turret_segment.end = turret_segment.start + turret_end;
-
-      // Calculate segments from projectiles
-      std::vector<segment> psegments;
-      for(auto i = player.projectiles.begin();
-          i != player.projectiles.end();
-          ++i)
-        psegments.emplace_back(
-          i->position(),
-          i->position() - 0.01f*i->velocity()
-        );
-
-      // Clear screen
-      ren.clear();
-      // Synchronize view with the camera
-      ren.view( input.cam.view() );
-      // Draw the player
-      ren.render(player.model(), test_biped_shape);
-      // Draw the target bipeds
-      for(auto i = test_bipeds.begin(); i != test_bipeds.end(); ++i)
-        ren.render(i->model(), test_biped_shape);
-      // Draw the player's weapon direction
-      ren.render(turret_segment);
-      // Draw projectiles in-flight
-      ren.render(psegments);
-      // Flip all drawings to the screen
-      win.present();
-
-      // Time how long the last frame required
-      auto lap_time = timer.lap();
-      // Update player's weapon direction
-      player.weapon.step(lap_time);
-      // Move physics objects (including projectiles), fire new projectiles,
-      // apply forces, react to being shot
-      physics.step(lap_time);
-      // Update camera position/orientation
-      input.cam.step(lap_time);
+      player_io.apply_input(player_body);
     }
   }
   catch(const std::exception & e)
@@ -392,16 +252,20 @@ void ship_demo()
     bullet_world physics;
     ship opponent( compose_transform(glm::vec2(60.0f, 60.0f)) );
 
-    warship player( compose_transform(glm::vec2(0.0f, 0.0f)), prand );
+    warship player_body( compose_transform(glm::vec2(0.0f, 0.0f)), prand );
     const projectile::properties test_bullet(0.008f, 1000.0f);
-    player.weapon_tree.weapons.emplace_back(glm::vec2(0.0f,  0.25f), test_bullet);
-    player.weapon_tree.weapons.emplace_back(glm::vec2(0.0f, -0.25f), test_bullet);
+    player_body.weapon_tree.weapons.emplace_back(
+      glm::vec2(0.0f,  0.25f), test_bullet
+    );
+    player_body.weapon_tree.weapons.emplace_back(
+      glm::vec2(0.0f, -0.25f), test_bullet
+    );
 
     // Move ships based on collision dynamics
-    physics.add_body(player);
+    physics.add_body(player_body);
     physics.add_body(opponent);
     // Apply movement controls and fire weapons in between substeps
-    physics.add_callback(player);
+    physics.add_callback(player_body);
 
     // obstacles
     std::array<glm::vec2, 4> square_vertices = {
@@ -418,9 +282,8 @@ void ship_demo()
 
     sdl media_layer(SDL_INIT_VIDEO);
     media_layer.gl_version(1, 4);
-    window win( media_layer, "", glm::ivec2(640, 480) );
-    shape_renderer ren(win);
-    human_interface input(win);
+    local_player player_io(media_layer);
+    shape_renderer ren(player_io.interface);
 
     // rendering shapes
     std::array<unsigned short, square_vertices.size()> square_indices;
@@ -436,34 +299,24 @@ void ship_demo()
     lap_timer timer;
     while(!quit)
     {
-      SDL_Event event;
-      while( media_layer.poll(event) )
-      {
-        switch(event.type)
-        {
-        case SDL_QUIT:
-          quit = true;
-          break;
-        }
-      }
-      input.apply_input(player);
-
       // Calculate segments from projectiles
       std::vector<segment> psegments;
-      for(auto i = player.projectiles.begin();
-          i != player.projectiles.end();
+      for(auto i = player_body.projectiles.begin();
+          i != player_body.projectiles.end();
           ++i)
         psegments.emplace_back(
           i->position(),
           i->position() - 0.01f*i->velocity()
         );
 
+      // Set camera to follow player object
+      player_io.view.position = player_body.position();
+      // Synchronize view with the camera
+      ren.view( player_io.view.view() );
       // Clear screen
       ren.clear();
-      // Synchronize view with the camera
-      ren.view( input.cam.view() );
       // Draw the player
-      ren.render(player.model(), ship_shape);
+      ren.render(player_body.model(), ship_shape);
       // Draw opponent
       ren.render(opponent.model(), ship_shape);
       // Draw obstacles
@@ -477,7 +330,7 @@ void ship_demo()
       // Draw projectiles in-flight
       ren.render(psegments);
       // Flip all drawings to the screen
-      win.present();
+      player_io.interface.present();
 
       // Time how long the last frame required
       auto lap_time = timer.lap();
@@ -485,7 +338,20 @@ void ship_demo()
       // apply forces, react to being shot
       physics.step(lap_time);
       // Update camera position/orientation
-      input.cam.step(lap_time);
+      player_io.view.step(lap_time);
+
+      // Process user input
+      SDL_Event event;
+      while( media_layer.poll(event) )
+      {
+        switch(event.type)
+        {
+        case SDL_QUIT:
+          quit = true;
+          break;
+        }
+      }
+      player_io.apply_input(player_body);
     }
   }
   catch(const std::exception & e)
